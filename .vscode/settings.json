@@ -1,3 +1,7 @@
 {
-    "sweetpad.build.xcodeWorkspacePath": "transorma.xcodeproj/project.xcworkspace"
+    "sweetpad.build.xcodeWorkspacePath": "transorma.xcodeproj/project.xcworkspace",
+    "[swift]": {
+        "editor.defaultFormatter": "sweetpad.sweetpad",
+        "editor.formatOnSave": true
+    }
 }
