@@ -5,60 +5,64 @@ import Testing
 
 @testable import TransormaCore
 
-struct FixtureDNS: TXTResolving {
-    let record: String
-    func records(for name: String) async throws -> [String] { [record] }
+@Test func unsignedContentDispositionCannotHideSignedMessageContent() async throws {
+    let fixture = try SignedFixture(body: "Your receipt. Shop now. Save today.")
+    let altered = Data("Content-Disposition: attachment\r\n".utf8) + fixture.raw
+    let message = try MailDocument(raw: altered)
+    #expect(message.content.html.isEmpty)
+    await #expect(throws: MailError.invalidSignature) {
+        try await DKIMVerifier(resolver: fixture.dns).verify(message)
+    }
 }
 
-struct SignedFixture {
-    let raw: Data
-    let dns: FixtureDNS
+@Test(arguments: ["inline", "attachment"])
+func aSignedContentDispositionIsAcceptedButDuplicatesAreRejected(disposition: String) async throws {
+    let fixture = try SignedFixture(contentDisposition: disposition)
+    let verifier = DKIMVerifier(resolver: fixture.dns)
+    let verified = try await verifier.verify(MailDocument(raw: fixture.raw))
+    #expect(verified.covers("content-disposition"))
+    let duplicate = try MailDocument(raw: Data("Content-Disposition: inline\r\n".utf8) + fixture.raw)
+    await #expect(throws: MailError.invalidSignature) { try await verifier.verify(duplicate) }
+}
 
-    init(
-        subject: String = "Summer sale: 40% off", body: String = "Save today. Shop now for our limited time sale.",
-        oneClick: Bool = true, algorithm: String = "ed25519-sha256", canonicalization: String = "relaxed/relaxed"
-    ) throws {
-        var fields = [
-            "From: Store <offers@store.example.com>", "To: recipient@example.net", "Subject: \(subject)",
-            "Content-Type: text/html; charset=utf-8",
-        ]
-        if oneClick {
-            fields += [
-                "List-Unsubscribe: <https://store.example.com/unsubscribe?token=recipient>",
-                "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
-            ]
-        }
-        let rawBody = Data((body + "\r\n").utf8)
-        let relaxedHeader = canonicalization.hasPrefix("relaxed")
-        let relaxedBody = canonicalization.hasSuffix("relaxed")
-        let bodyHash = Data(SHA256.hash(data: DKIMVerifier.canonicalBody(rawBody, relaxed: relaxedBody)))
-            .base64EncodedString()
-        let names = fields.map { $0.components(separatedBy: ":")[0].lowercased() }.joined(separator: ":")
-        let dkim =
-            "DKIM-Signature: v=1; a=\(algorithm); c=\(canonicalization); d=store.example.com; s=test; h=\(names); bh=\(bodyHash); b="
-        var signed = Data()
-        for field in fields {
-            signed += DKIMVerifier.canonicalHeader(Data(field.utf8), relaxed: relaxedHeader) + Data([13, 10])
-        }
-        signed += DKIMVerifier.canonicalHeader(Data(dkim.utf8), relaxed: relaxedHeader)
-        let signature: Data
-        if algorithm == "ed25519-sha256" {
-            let key = Curve25519.Signing.PrivateKey()
-            dns = FixtureDNS(record: "v=DKIM1; k=ed25519; p=" + key.publicKey.rawRepresentation.base64EncodedString())
-            signature = try key.signature(for: Data(SHA256.hash(data: signed)))
-        } else {
-            let attributes: [CFString: Any] = [kSecAttrKeyType: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits: 2048]
-            let key = try #require(SecKeyCreateRandomKey(attributes as CFDictionary, nil))
-            let publicKey = try #require(SecKeyCopyPublicKey(key))
-            let publicData = try #require(SecKeyCopyExternalRepresentation(publicKey, nil)) as Data
-            dns = FixtureDNS(record: "v=DKIM1; k=rsa; p=" + publicData.base64EncodedString())
-            signature =
-                try #require(SecKeyCreateSignature(key, .rsaSignatureMessagePKCS1v15SHA256, signed as CFData, nil))
-                as Data
-        }
-        raw =
-            Data((([dkim + signature.base64EncodedString()] + fields).joined(separator: "\r\n") + "\r\n\r\n").utf8)
-            + rawBody
+@Test func resolverCancellationStopsSignatureFallback() async throws {
+    let fixture = try SignedFixture()
+    let message = try MailDocument(raw: fixture.raw)
+    let signature = try #require(message.headers.first(where: { $0.name == "dkim-signature" }))
+    let multipleSignatures = try MailDocument(raw: signature.raw + Data([13, 10]) + fixture.raw)
+    let resolver = CancellingDNS()
+    await #expect(throws: CancellationError.self) {
+        try await DKIMVerifier(resolver: resolver).verify(multipleSignatures)
+    }
+    #expect(await resolver.requests == 1)
+}
+
+@Test func cancelledVerificationRejectsALateDNSResult() async throws {
+    let fixture = try SignedFixture()
+    let message = try MailDocument(raw: fixture.raw)
+    let gate = AsyncGate()
+    let verifier = DKIMVerifier(resolver: SuspendedDNS(record: fixture.dns.record, gate: gate))
+    let task = Task { try await verifier.verify(message) }
+    await gate.waitUntilWaiting()
+    task.cancel()
+    await gate.open()
+    await #expect(throws: CancellationError.self) { try await task.value }
+}
+
+private actor CancellingDNS: TXTResolving {
+    private(set) var requests = 0
+    func records(for name: String) async throws -> [String] {
+        requests += 1
+        throw CancellationError()
+    }
+}
+
+private struct SuspendedDNS: TXTResolving {
+    let record: String
+    let gate: AsyncGate
+    func records(for name: String) async throws -> [String] {
+        await gate.wait()
+        return [record]
     }
 }
 

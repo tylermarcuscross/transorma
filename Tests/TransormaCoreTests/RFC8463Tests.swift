@@ -1,6 +1,6 @@
 // Published interoperability vector: RFC 8463, Appendix A.
 // Copyright (c) 2018 IETF Trust and the persons identified as the document authors.
-// See THIRD_PARTY_NOTICES.md for the Simplified BSD license for these code components.
+// See Docs/THIRD_PARTY_NOTICES.md for the Simplified BSD license for these code components.
 import Foundation
 import Testing
 

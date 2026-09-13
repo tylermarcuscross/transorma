@@ -6,7 +6,10 @@
     "terminal.integrated.env.osx": {
         "DEVELOPER_DIR": "/Applications/Xcode-27.app/Contents/Developer"
     },
-    "swift.sourcekit-lsp.serverArguments": ["--default-workspace-type", "buildServer"],
+    "swift.sourcekit-lsp.serverArguments": [
+        "--default-workspace-type",
+        "buildServer"
+    ],
     "[swift]": {
         "editor.defaultFormatter": "swiftlang.swift-vscode",
         "editor.formatOnSave": true,
@@ -17,6 +20,25 @@
         "**/.build/**": true
     },
     "search.exclude": {
-        "**/.build": true
+        "**/.build": true,
+        "**/.swiftpm": true,
+        "**/.compile": true,
+        "**/xcuserdata": true
+    },
+    "[makefile]": {
+        "editor.insertSpaces": false
+    },
+    "makefile.configureOnOpen": false,
+    "swift.autoGenerateLaunchConfigurations": false,
+    "explorer.sortOrder": "default",
+    "explorer.sortOrderLexicographicOptions": "unicode",
+    "files.exclude": {
+        ".build": true,
+        ".swiftpm": true,
+        ".compile": true,
+        ".compile.lock": true,
+        "Transorma.xcodeproj": true,
+        "**/xcuserdata": true,
+        "**/.DS_Store": true
     }
 }

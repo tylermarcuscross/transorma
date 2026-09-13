@@ -1,18 +1,19 @@
 {
-	"name": "xcode build server",
-	"version": "1.3.0",
-	"bspVersion": "2.2.0",
-	"languages": [
-		"c",
-		"cpp",
-		"objective-c",
-		"objective-cpp",
-		"swift"
-	],
-	"argv": [
-		"/bin/zsh",
-		"scripts/build-server.sh"
-	],
-	"indexStorePath": ".build/Xcode/Index.noindex/DataStore",
-	"kind": "manual"
+    "name": "xcode build server",
+    "version": "1.3.0",
+    "bspVersion": "2.2.0",
+    "languages": [
+        "c",
+        "cpp",
+        "objective-c",
+        "objective-cpp",
+        "swift"
+    ],
+    "argv": [
+        "/bin/zsh",
+        "Scripts/editor.sh",
+        "serve"
+    ],
+    "indexStorePath": ".build/Xcode/Index.noindex/DataStore",
+    "kind": "manual"
 }

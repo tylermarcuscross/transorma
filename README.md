@@ -2,100 +2,75 @@
 
 Automatic unsubscribe and marketing cleanup for Apple Mail on macOS 27.
 
-Enable protection once. When Apple Mail receives a supported marketing message, Transorma queues an unsubscribe request and asks Mail to move the message to Trash. A companion app shows activity, manages senders to keep, and resumes queued work. There are no per-message approval dialogs.
+Enable protection once. When Mail receives a supported marketing message, Transorma queues an unsubscribe and asks Mail to move the message to Trash. The companion app shows activity, manages senders to keep, and resumes queued work. There are no per-message approval dialogs.
 
-This is a working implementation under development, **not a release-certified product**. Signed Mail integration, broad classification evaluation, and App Store validation remain necessary. See [release preparation](docs/RELEASE.md).
+The app is under development. Local builds and automated tests work without paid developer enrollment; signed Mail integration and App Store validation remain release work. See the [validation record](Docs/VALIDATION.md) and [release preparation](Docs/RELEASE.md).
 
-## What is implemented
+## Start developing
 
-- A MailKit message action extension using public APIs, App Sandbox, and a shared App Group.
-- Conservative English-language promotion detection with transactional and personal-mail exclusions, followed by an on-device Apple Intelligence check when available.
-- DKIM verification using CryptoKit/Security and system DNS. RSA-SHA256 and Ed25519-SHA256, simple/relaxed canonicalization, complete-body verification, signed classification and unsubscribe headers, exact From-domain alignment, duplicate-header rejection, and published RFC interoperability tests.
-- RFC 8058 HTTPS POST with the exact one-click body, no cookies or credentials, and no redirects.
-- An Apple Intelligence fallback for a signed email's explicit unsubscribe link, including bounded same-host navigation and simple HTML confirmation forms. Models select from a generated enum of validated action IDs; they cannot construct requests.
-- macOS 27 `PrivateCloudComputeLanguageModel` with moderate reasoning, conditional on both user opt-in and the real signing entitlement. On-device inference runs first. PCC is disabled in the default build.
-- Bounded persistent queue, cross-process exclusive claims, backoff on explicit temporary server errors, token deletion after completion, duplicate-request fingerprints, interrupted-request accounting, and seven-day expiry.
-- Native setup, keep list, activity, login launch, pause, and in-app privacy information.
-
-## Requirements and setup
-
-1. Install [Xcode 27 RC or newer](https://developer.apple.com/download/applications/) and select it in Xcode → Settings → Locations → Command Line Tools. macOS 27's Foundation Models SDK is part of Xcode; no Python package, model download script, or third-party cloud service is needed.
-2. Open `transorma.xcodeproj` and choose the shared **Transorma** scheme.
-3. For a signed installation, select your developer team for both targets. Register `group.me.tylercross.transorma` for the app and extension, or replace that identifier consistently in both entitlements and `SharedStore.groupIdentifier`. Provisioned App Groups require appropriate developer-account access.
-4. Build and run. In Mail → Settings → Extensions, enable Transorma and grant access to message contents. Then enable **Protect my inbox** in Transorma.
-5. Keep Mail running for incoming-message processing. Keep Transorma running, optionally at login, to resume unsubscribe work after the extension exits.
-
-The system's one-time extension activation and the app's one-time authorization are required setup. They are not repeated per email. Enabling protection authorizes automatic unsubscribe website requests and Trash actions. Recover messages in Mail's Trash; resubscription must happen on the sender's website.
-
-### Working in VS Code
-
-Open this folder, install the recommended Swift extension, and run **Tasks: Run Build Task** (`⇧⌘B`). **F5 → Transorma: isolated UI** launches a Debug build with temporary settings and no unsubscribe worker. Swift files format on save using Xcode's bundled `swift-format`. See [the development guide](docs/DEVELOPMENT.md) for setup, test/lint tasks, import troubleshooting, and a map of the code.
-
-This Mac now uses **Xcode 27 RC (`27A266a`)** at `/Applications/Xcode-27.app`, with Swift 6.4 and the macOS 27 SDK. VS Code and the project scripts select this toolchain without requiring a system-wide `xcode-select` change. Developer enrollment and signed Mail integration remain separate from local builds. The optional `fm` CLI is not required by the app.
-
-## Verification
+Install Xcode 27 or newer and open this folder in VS Code, or open `Transorma.xcodeproj` in Xcode and select the **Transorma** scheme. For VS Code, install the recommended official Swift extension and the development-only Xcode adapter:
 
 ```sh
-# No real mail, external HTTP requests, or model calls:
-zsh scripts/test-core.sh
-
-# Current SDK + Xcode, including the app and embedded extension:
-zsh scripts/verify.sh
-
-# Format all Swift sources, or check style without changing files:
-zsh scripts/style.sh format
-zsh scripts/style.sh lint
-
-# Run the actual companion UI tests with isolated settings:
-zsh scripts/build.sh test -only-testing:transormaUITests
-
-# Read-only live probes. Uses example.com and a public DNS TXT record:
-swift run transorma-diagnostics --network
-
-# Synthetic examples sent only to the on-device model:
-swift run transorma-diagnostics --intelligence
-
-# Render a native preview with temporary settings and no unsubscribe worker:
-zsh scripts/preview.sh
+brew install xcode-build-server
+make doctor
+make build
 ```
 
-The normal tests inject DNS, HTTP responses, and intelligence choices. Real cryptographic fixtures cover tampering and signed-header handling. A separate diagnostics executable exercises actual DNS/TLS, three classification examples, and one page-action selection without reading a mailbox or sending unsubscribe requests. These synthetic checks are a smoke test, not evidence of production classification accuracy.
+In VS Code, **⇧⌘B** builds and **F5 → Transorma: isolated UI** debugs the app. Swift files format on save. In Xcode, use **⌘R**, **⌘U**, and native SwiftUI previews. Both editors use the Development configuration: disposable settings, no unsubscribe worker, and no paid account required.
 
-## Architecture
-
-```mermaid
-flowchart LR
-    Mail[Apple Mail receives a message] --> Extension[MailKit extension]
-    Extension --> Policy[Keep list and promotion checks]
-    Policy --> Signature[Verify full DKIM signature]
-    Signature --> Local[On-device classification]
-    Local --> Queue[Shared persistent queue]
-    Queue --> Trash[Return Trash action to Mail]
-    Queue --> Worker[App or extension worker]
-    Worker --> Standard[RFC 8058 POST]
-    Worker --> Page[Parse unsubscribe page]
-    Page --> Choice[On-device action selection]
-    Choice --> PCC[Optional entitled PCC fallback]
-    Choice --> Validation[Validate existing action]
-    PCC --> Validation
-    Validation --> HTTPS[Public-IP-pinned HTTPS]
+```sh
+make run          # Open the actual development app
+make test-core    # Independent Swift package tests
+make test         # Core, app model, and UI tests through Xcode
+make verify       # Formatting, unit tests, app/extension build, whitespace
+make format       # Format all Swift sources with the bundled swift-format
 ```
 
-`Sources/TransormaCore` contains the policy, byte-preserving parser, verifier, transport, state, and workers. `mailextension` is the MailKit adapter. `transorma` contains the SwiftUI app. `Tests/TransormaCoreTests` runs independently of signing and Mail. There are no remote package dependencies. The local C module exposes Apple's system libxml2 and resolver; its compiler flag supplies the SDK's libxml2 include directory.
+Run `make` for all commands. The [development guide](Docs/DEVELOPMENT.md) covers toolchain selection, VS Code indexing, debugging, and signed configurations. No remote Swift package dependencies or separate Swift installation are required.
 
-## Current coverage boundaries
+## Code layout
 
-- Processes new messages supplied by MailKit. It cannot enumerate an existing inbox, run while Mail is closed, or promise continuous extension lifetime. Workers resume on later Mail activity or while the companion app is open. A queued unsubscribe may complete after Trash is requested.
-- Keeps ambiguous, encrypted, malformed, oversized, unsigned, unsupported-signature, or nonmatching messages. Two distinct promotion signals plus an unsubscribe destination are required; a list header alone does not prove marketing. This intentionally leaves many newsletters untouched.
-- The fallback handles UTF-8 HTML, explicit links, same-host redirects, and POST forms made of hidden fields plus one explicit unsubscribe button. Login, CAPTCHA, JavaScript, cookies, cross-host navigation, arbitrary preference controls, and `mailto:` unsubscribe are not automated. Plain-text-only links without a List-Unsubscribe header are not yet extracted.
-- DKIM validates the signing domain and covered message bytes; it does not establish that the sender is honest. This verifier applies a stricter subset of DKIM than a general mail server, so some valid mail is preserved. DNS has the security properties of the user's configured resolver.
-- Inference errors keep a message or stop page processing. An accepted one-click response or a site's success text is recorded accurately; neither proves that future mail will stop. No automatic replay follows a transport interruption with an unknown outcome.
-- Protection is off by default. No real mailbox was modified during development.
+| Location | Responsibility |
+| --- | --- |
+| `App/` | SwiftUI app, observable app state, views, and resources. |
+| `TransormaMailExtension/` | MailKit callbacks and extension resources. |
+| `Sources/TransormaCore/` | Mail parsing, protection decisions, unsubscribe workflows, and infrastructure in one shared module. |
+| `Sources/CMailSystem/` | Bridge to Apple's system DNS resolver and libxml2. |
+| `Sources/TransormaDiagnostics/` | Explicit live network and on-device model smoke checks. |
+| `Tests/` | Core, app model, and UI tests with shared deterministic fixtures. |
+| `Config/` | Xcode compiler and signing configurations. |
+| `Docs/` | Architecture, development, release guidance, and third-party notices. |
+| `Makefile`, `Scripts/`, `.vscode/` | Shared commands and editor/toolchain integration. |
 
-## Apple Intelligence and distribution
+Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processing flow, concurrency rules, and reasons behind this structure.
 
-Apple's [macOS 27 APIs](https://developer.apple.com/documentation/foundationmodels/adding-server-side-intelligence-with-private-cloud-compute) expose Private Cloud Compute to eligible apps. [PCC access](https://developer.apple.com/private-cloud-compute) requires Small Business Program membership, fewer than two million first-time downloads, and an approved managed entitlement. Neither a macOS upgrade nor `fm` license acceptance grants an app that entitlement.
+`Transorma.xcodeproj` defines native targets and packaging. It remains versioned and is hidden from VS Code's Explorer along with generated state; `make xcode` opens it. Build outputs live in ignored `.build/`, and `make clean` removes generated builds and editor indexes. See [workspace conventions](Docs/DEVELOPMENT.md#workspace-and-repository-layout).
 
-The default app and extension deliberately do not claim the PCC entitlement. After approval, enable it only in the target that will make PCC requests and verify the signed binary and provisioning profile. Do not set the entitlement just to suppress a runtime error. See [release preparation](docs/RELEASE.md) for exact validation and remaining work.
+## Implemented behavior
 
-Relevant specifications: [MailKit message actions](https://developer.apple.com/documentation/mailkit/memessageactionhandler), [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058), [RFC 6376](https://www.rfc-editor.org/rfc/rfc6376), [RFC 8463](https://www.rfc-editor.org/rfc/rfc8463), [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+- MailKit message actions, App Sandbox, and a shared App Group using public APIs.
+- Conservative English promotion rules, transactional and personal-mail exclusions, a keep list, and on-device classification when available.
+- Complete-body DKIM verification, RSA-SHA256 and Ed25519-SHA256, signed decision headers, exact From-domain alignment, and published RFC interoperability tests.
+- RFC 8058 one-click HTTPS POST without cookies, credentials, or redirects.
+- An Apple Intelligence fallback for an explicit unsubscribe link in authenticated mail. It supports bounded same-host navigation and simple HTML forms. The model chooses from validated actions; application code constructs requests.
+- Optional macOS 27 Private Cloud Compute reasoning after local inference, guarded by both user opt-in and the actual signing entitlement. Default entitlements do not enable PCC.
+- A persistent bounded queue with exclusive cross-process claims, consent checks before network writes, explicit temporary-error backoff, seven-day expiry, and token removal after completion.
+- Activity history, pause, keep list, login launch, and in-app privacy information.
+
+## Running against Mail
+
+After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Protect my inbox** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
+
+Mail must be running to process arriving messages. Keep Transorma running, optionally at login, to resume queued work after the extension exits. One-time setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
+
+## Coverage boundaries
+
+The extension processes new messages supplied by MailKit; it cannot enumerate an existing inbox or promise continuous background execution. An unsubscribe may complete after Trash is requested. If the callback deadline wins before queue commitment, assessment cannot later enqueue work.
+
+Ambiguous, encrypted, malformed, oversized, unsigned, or unsupported messages are preserved. A list header alone does not establish marketing. The conservative rules leave many newsletters untouched; synthetic model checks do not establish production classification accuracy.
+
+Web fallback supports UTF-8 HTML, same-host links, and simple POST forms with hidden fields and an explicit unsubscribe button. It does not automate login, CAPTCHA, JavaScript, cookies, arbitrary preferences, cross-host navigation, or `mailto:` requests. Plain-text-only links without a List-Unsubscribe header are not extracted. Transport interruptions with an unknown outcome are not automatically replayed. A successful response does not prove that future mail will stop.
+
+[Private Cloud Compute access](https://developer.apple.com/private-cloud-compute) requires eligible program membership and an approved managed entitlement. An OS or Xcode upgrade does not grant it. The [release guide](Docs/RELEASE.md) tracks signing, inference evaluation, privacy review, and distribution requirements.
+
+Specifications: [MailKit message actions](https://developer.apple.com/documentation/mailkit/memessageactionhandler), [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058), [RFC 6376](https://www.rfc-editor.org/rfc/rfc6376), [RFC 8463](https://www.rfc-editor.org/rfc/rfc8463). Attribution for published test vectors is in [third-party notices](Docs/THIRD_PARTY_NOTICES.md).

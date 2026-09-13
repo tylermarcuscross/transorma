@@ -13,9 +13,14 @@ let package = Package(
         .target(
             name: "TransormaCore", dependencies: ["CMailSystem"],
             swiftSettings: [
-                .unsafeFlags(["-application-extension", "-Xcc", "-iwithsysroot", "-Xcc", "/usr/include/libxml2"])
+                .treatAllWarnings(as: .error),
+                .unsafeFlags(["-application-extension", "-Xcc", "-iwithsysroot", "-Xcc", "/usr/include/libxml2"]),
             ]),
-        .executableTarget(name: "TransormaDiagnostics", dependencies: ["TransormaCore"], path: "Tools/Diagnostics"),
-        .testTarget(name: "TransormaCoreTests", dependencies: ["TransormaCore"]),
+        .executableTarget(
+            name: "TransormaDiagnostics", dependencies: ["TransormaCore"],
+            swiftSettings: [.treatAllWarnings(as: .error)]),
+        .testTarget(
+            name: "TransormaCoreTests", dependencies: ["TransormaCore"],
+            swiftSettings: [.treatAllWarnings(as: .error)]),
     ]
 )

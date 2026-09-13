@@ -1,0 +1,9 @@
+#include "Debug.xcconfig"
+
+// Local UI development requires no account and cannot process a real mailbox.
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) TRANSORMA_DEVELOPMENT
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+REGISTER_APP_GROUPS = NO
+CODE_SIGN_ENTITLEMENTS =

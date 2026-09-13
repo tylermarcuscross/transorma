@@ -2,63 +2,171 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Transorma: rebuild index",
-            "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/build.sh", "clean", "build-for-testing"],
-            "options": { "cwd": "${workspaceFolder}" },
-            "problemMatcher": "$swiftc"
-        },
-        {
             "label": "Transorma: build",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/build.sh"],
-            "options": { "cwd": "${workspaceFolder}" },
-            "group": { "kind": "build", "isDefault": true },
-            "problemMatcher": "$swiftc"
+            "command": "/usr/bin/make",
+            "args": [
+                "build"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Transorma: test all",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "test"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc",
+            "group": "test"
+        },
+        {
+            "label": "Transorma: test unit",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "test-unit"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         },
         {
             "label": "Transorma: test core",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/test-core.sh"],
-            "options": { "cwd": "${workspaceFolder}" },
-            "group": { "kind": "test", "isDefault": true },
-            "problemMatcher": "$swiftc"
+            "command": "/usr/bin/make",
+            "args": [
+                "test-core"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc",
+            "group": "test"
         },
         {
             "label": "Transorma: test UI",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/build.sh", "test", "-only-testing:transormaUITests"],
-            "options": { "cwd": "${workspaceFolder}" },
-            "group": "test",
-            "problemMatcher": "$swiftc"
+            "command": "/usr/bin/make",
+            "args": [
+                "test-ui"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc",
+            "group": "test"
         },
         {
             "label": "Transorma: lint",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/style.sh", "lint"],
-            "options": { "cwd": "${workspaceFolder}" },
+            "command": "/usr/bin/make",
+            "args": [
+                "lint"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$swiftc"
         },
         {
             "label": "Transorma: format",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/style.sh", "format"],
-            "options": { "cwd": "${workspaceFolder}" },
+            "command": "/usr/bin/make",
+            "args": [
+                "format"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$swiftc"
         },
         {
             "label": "Transorma: verify",
             "type": "process",
-            "command": "/bin/zsh",
-            "args": ["scripts/verify.sh"],
-            "options": { "cwd": "${workspaceFolder}" },
+            "command": "/usr/bin/make",
+            "args": [
+                "verify"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: refresh index",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "index"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: rebuild index",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "reindex"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: build diagnostics",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "build-diagnostics"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: doctor",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "doctor"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: open Xcode",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "xcode"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         }
     ]
 }

@@ -5,32 +5,32 @@
             "name": "Transorma: isolated UI",
             "type": "swift",
             "request": "launch",
-            "program": "${workspaceFolder}/.build/Xcode/Build/Products/Debug/transorma.app/Contents/MacOS/transorma",
-            "args": [
-                "--ui-testing"
-            ],
+            "program": "${workspaceFolder}/.build/Xcode/Build/Products/Development/Transorma.app/Contents/MacOS/Transorma",
+            "args": [],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "Transorma: build"
         },
         {
+            "name": "Transorma: network diagnostics",
             "type": "swift",
             "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:transorma}",
-            "name": "Debug transorma-diagnostics",
-            "target": "transorma-diagnostics",
-            "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug transorma-diagnostics"
+            "program": "${workspaceFolder}/.build/debug/transorma-diagnostics",
+            "args": [
+                "--network"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Transorma: build diagnostics"
         },
         {
+            "name": "Transorma: intelligence diagnostics",
             "type": "swift",
             "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:transorma}",
-            "name": "Release transorma-diagnostics",
-            "target": "transorma-diagnostics",
-            "configuration": "release",
-            "preLaunchTask": "swift: Build Release transorma-diagnostics"
+            "program": "${workspaceFolder}/.build/debug/transorma-diagnostics",
+            "args": [
+                "--intelligence"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Transorma: build diagnostics"
         }
     ]
 }

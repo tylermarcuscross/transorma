@@ -4,6 +4,28 @@ import Testing
 @testable import TransormaCore
 
 @Test(arguments: [
+    "5\r\nHello\r\n0\r\n",
+    "5\r\nHello\r\n0\r\n\r",
+    "5\r\nHello\r\n0\r\n\r\nextra",
+    "5\r\nHello\r\n0\r\nDigest: unsupported\r\n\r\n",
+    "5\r\nHello\r\n",
+    "5\r\nHello0\r\n\r\n",
+    "0\r\n\r\nHTTP/1.1 200 OK\r\n\r\n",
+    "+5\r\nHello\r\n0\r\n\r\n",
+    "-0\r\n\r\n",
+])
+func rejectsTruncatedOrAmbiguousChunkedResponses(body: String) {
+    let wire = Data(("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n" + body).utf8)
+    #expect(throws: MailError.networkFailure) { try HTTPDecoder.decode(wire) }
+}
+
+@Test func chunkedResponsesAcceptAnEmptyBodyAndCompleteChunkExtensions() throws {
+    #expect(try HTTPDecoder.decodeChunks(Data("0\r\n\r\n".utf8)).isEmpty)
+    let body = try HTTPDecoder.decodeChunks(Data("2;name=value\r\nHe\r\n3\r\nllo\r\n0\r\n\r\n".utf8))
+    #expect(String(decoding: body, as: UTF8.self) == "Hello")
+}
+
+@Test(arguments: [
     "127.0.0.1", "10.0.0.1", "169.254.169.254", "172.16.0.1", "192.168.1.1", "100.64.0.1", "0.0.0.0", "192.0.2.1",
     "198.18.0.1", "224.0.0.1", "255.255.255.255", "::1", "::ffff:127.0.0.1", "fc00::1", "fe80::1", "2001:db8::1",
     "2002:7f00:1::", "3fff::1",
@@ -25,7 +47,7 @@ func rejectsUnsafeURLs(value: String) throws {
 @Test func oneClickWireRequestHasNoAmbientCredentials() throws {
     let url = try #require(URL(string: "https://store.example.com/u?t=abc"))
     let bytes = try PublicHTTPSClient.encode(
-        HTTPRequest(url: url, method: "POST", body: Data("List-Unsubscribe=One-Click".utf8)))
+        HTTPRequest(url: url, method: .post, body: Data("List-Unsubscribe=One-Click".utf8)))
     let wire = String(decoding: bytes, as: UTF8.self)
     #expect(wire.contains("POST /u?t=abc HTTP/1.1\r\n"))
     #expect(wire.contains("Content-Length: 26\r\n"))
