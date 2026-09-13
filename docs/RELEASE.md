@@ -4,9 +4,9 @@ This file distinguishes implemented behavior from checks that require an actual 
 
 ## Account and tools
 
-The project owner reported having neither paid Apple Developer Program nor Small Business Program enrollment. Complete developer enrollment before provisioning App Groups and distributing the extension. For PCC, also enroll in Small Business and [request Apple's managed entitlement](https://developer.apple.com/private-cloud-compute). Apple currently limits eligibility to developers with fewer than two million first-time downloads.
+Paid Apple Developer Program enrollment is processing. Complete enrollment before provisioning App Groups and distributing the extension. For PCC, also enroll in Small Business and [request Apple's managed entitlement](https://developer.apple.com/private-cloud-compute). Apple currently limits eligibility to developers with fewer than two million first-time downloads.
 
-Install the full Xcode 27 release candidate or newer from the signed-in developer downloads page. The macOS 27 SDK and Swift 6.4 Command Line Tools already exist on the development machine. The older Xcode's build service cannot package that SDK. Do not substitute a renamed SDK, private framework, CLI proxy, or a fabricated entitlement.
+Xcode 27 RC (`27A266a`) is installed at `/Applications/Xcode-27.app`. Use the final release toolchain for App Store submission. The local build script uses ad hoc signing without App Group entitlements for UI development; use the project's normal signing settings and your approved team for the installed Mail extension.
 
 `fm` is optional developer tooling. Apple requires a privileged user to read and accept its machine-wide terms (`sudo fm license`). That acceptance was not performed. Native Foundation Models inference is independent of this CLI setup.
 
@@ -44,7 +44,7 @@ The protected shared folder contains settings, bounded activity, pending unsubsc
 
 ## App Store submission
 
-- Produce and validate an archive with the release Xcode toolchain. The current work has not produced a store-ready archive.
+- Produce and validate a developer-signed archive with the release Xcode toolchain. An unsigned Xcode 27 RC archive has passed local packaging checks; it is not a store-ready archive.
 - Add final app artwork, screenshots, description, support URL, and a publicly hosted privacy-policy URL. The in-app policy is implemented; hosting and App Store Connect metadata are not.
 - Review the privacy manifests and App Store privacy answers against final behavior, including optional PCC and unsubscribe websites. The manifests currently declare no tracking, no developer-collected data, and no required-reason APIs. Revisit if storage, diagnostics, analytics, or APIs change.
 - Explain the one-time consent, automatic website requests, Trash behavior, preserve-on-uncertainty policy, and limitations in reviewer notes. [RFC 8058 §3.2](https://www.rfc-editor.org/rfc/rfc8058) requires consent but leaves its timing and form unspecified; this app requests consent during setup.

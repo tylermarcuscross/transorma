@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct transormaApp: App {
+struct TransormaApp: App {
     @StateObject private var model = ProtectionModel()
     var body: some Scene {
         WindowGroup {

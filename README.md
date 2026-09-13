@@ -27,9 +27,11 @@ This is a working implementation under development, **not a release-certified pr
 
 The system's one-time extension activation and the app's one-time authorization are required setup. They are not repeated per email. Enabling protection authorizes automatic unsubscribe website requests and Trash actions. Recover messages in Mail's Trash; resubscription must happen on the sender's website.
 
-### Toolchain found during development
+### Working in VS Code
 
-On September 13, 2026 this Mac had macOS 27.0 RC (`26A428`), Swift 6.4, and the macOS 27 SDK in Command Line Tools, alongside **Xcode 26.6**. The core can build and test using those command-line tools. Xcode 26.6 cannot package the macOS 27 SDK (`SDK lookup failed for canonical name: macosx27.0`). A complete archive needs Xcode 27. Apple's RC download redirected to a developer sign-in page, so the IDE upgrade could not be installed automatically. The `fm` CLI is present but its machine-wide license has not been accepted; the app uses the Swift framework and does not depend on `fm`.
+Open this folder, install the recommended Swift extension, and run **Tasks: Run Build Task** (`⇧⌘B`). **F5 → Transorma: isolated UI** launches a Debug build with temporary settings and no unsubscribe worker. Swift files format on save using Xcode's bundled `swift-format`. See [the development guide](docs/DEVELOPMENT.md) for setup, test/lint tasks, import troubleshooting, and a map of the code.
+
+This Mac now uses **Xcode 27 RC (`27A266a`)** at `/Applications/Xcode-27.app`, with Swift 6.4 and the macOS 27 SDK. VS Code and the project scripts select this toolchain without requiring a system-wide `xcode-select` change. Developer enrollment and signed Mail integration remain separate from local builds. The optional `fm` CLI is not required by the app.
 
 ## Verification
 
@@ -39,6 +41,13 @@ zsh scripts/test-core.sh
 
 # Current SDK + Xcode, including the app and embedded extension:
 zsh scripts/verify.sh
+
+# Format all Swift sources, or check style without changing files:
+zsh scripts/style.sh format
+zsh scripts/style.sh lint
+
+# Run the actual companion UI tests with isolated settings:
+zsh scripts/build.sh test -only-testing:transormaUITests
 
 # Read-only live probes. Uses example.com and a public DNS TXT record:
 swift run transorma-diagnostics --network

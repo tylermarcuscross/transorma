@@ -1,14 +1,16 @@
+import Darwin
 import Foundation
 import Network
 import Security
-import Darwin
 
 public struct HTTPRequest: Sendable {
     public var url: URL
     public var method: String
     public var body: Data?
     public init(url: URL, method: String = "GET", body: Data? = nil) {
-        self.url = url; self.method = method; self.body = body
+        self.url = url
+        self.method = method
+        self.body = body
     }
 }
 
@@ -17,7 +19,9 @@ public struct HTTPResponse: Sendable {
     public let headers: [String: String]
     public let body: Data
     public init(status: Int, headers: [String: String] = [:], body: Data = Data()) {
-        self.status = status; self.headers = headers; self.body = body
+        self.status = status
+        self.headers = headers
+        self.body = body
     }
 }
 
@@ -28,15 +32,19 @@ public protocol HTTPTransport: Sendable {
 public enum URLPolicy {
     public static func validate(_ url: URL, sameHost: String? = nil) throws {
         guard url.scheme?.lowercased() == "https", let host = url.host?.lowercased(),
-              host.utf8.count <= 253, url.absoluteString.utf8.count <= 8192,
-              url.user == nil, url.password == nil, url.fragment == nil,
-              url.port == nil || url.port == 443,
-              host.contains("."), !host.hasSuffix("."),
-              host.utf8.allSatisfy({ (97...122).contains($0) || (48...57).contains($0) || $0 == 45 || $0 == 46 }),
-              !["localhost", "local", "internal", "home", "lan", "test", "invalid", "example", "onion"].contains(host.split(separator: ".").last.map(String.init) ?? ""),
-              sameHost == nil || host == sameHost?.lowercased() else { throw MailError.unsafeURL }
+            host.utf8.count <= 253, url.absoluteString.utf8.count <= 8192,
+            url.user == nil, url.password == nil, url.fragment == nil,
+            url.port == nil || url.port == 443,
+            host.contains("."), !host.hasSuffix("."),
+            host.utf8.allSatisfy({ (97...122).contains($0) || (48...57).contains($0) || $0 == 45 || $0 == 46 }),
+            !["localhost", "local", "internal", "home", "lan", "test", "invalid", "example", "onion"].contains(
+                host.split(separator: ".").last.map(String.init) ?? ""),
+            sameHost == nil || host == sameHost?.lowercased()
+        else { throw MailError.unsafeURL }
         var address = in_addr()
-        guard inet_pton(AF_INET, host, &address) != 1, !host.allSatisfy({ $0.isNumber || $0 == "." }) else { throw MailError.unsafeURL }
+        guard inet_pton(AF_INET, host, &address) != 1, !host.allSatisfy({ $0.isNumber || $0 == "." }) else {
+            throw MailError.unsafeURL
+        }
     }
 
     public static func isPublicAddress(_ address: String) -> Bool {
@@ -44,11 +52,11 @@ public enum URLPolicy {
         if inet_pton(AF_INET, address, &v4) == 1 {
             let n = UInt32(bigEndian: v4.s_addr)
             let blocked: [(UInt32, UInt32)] = [
-                (0x00000000, 0xff000000), (0x0a000000, 0xff000000), (0x64400000, 0xffc00000),
-                (0x7f000000, 0xff000000), (0xa9fe0000, 0xffff0000), (0xac100000, 0xfff00000),
-                (0xc0000000, 0xffffff00), (0xc0000200, 0xffffff00), (0xc0586300, 0xffffff00),
-                (0xc0a80000, 0xffff0000), (0xc6120000, 0xfffe0000), (0xc6336400, 0xffffff00),
-                (0xcb007100, 0xffffff00), (0xe0000000, 0xe0000000)
+                (0x0000_0000, 0xff00_0000), (0x0a00_0000, 0xff00_0000), (0x6440_0000, 0xffc0_0000),
+                (0x7f00_0000, 0xff00_0000), (0xa9fe_0000, 0xffff_0000), (0xac10_0000, 0xfff0_0000),
+                (0xc000_0000, 0xffff_ff00), (0xc000_0200, 0xffff_ff00), (0xc058_6300, 0xffff_ff00),
+                (0xc0a8_0000, 0xffff_0000), (0xc612_0000, 0xfffe_0000), (0xc633_6400, 0xffff_ff00),
+                (0xcb00_7100, 0xffff_ff00), (0xe000_0000, 0xe000_0000),
             ]
             return !blocked.contains { n & $0.1 == $0.0 }
         }
@@ -73,15 +81,21 @@ public struct PublicHTTPSClient: HTTPTransport {
     public init() {}
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         try URLPolicy.validate(request.url)
-        guard let host = request.url.host, ["GET", "POST"].contains(request.method), (request.body?.count ?? 0) <= 32_000 else { throw MailError.unsafeURL }
+        guard let host = request.url.host, ["GET", "POST"].contains(request.method),
+            (request.body?.count ?? 0) <= 32_000
+        else { throw MailError.unsafeURL }
         let addresses = try await Self.resolve(host)
-        guard !addresses.isEmpty, addresses.allSatisfy(URLPolicy.isPublicAddress), let address = addresses.first else { throw MailError.unsafeURL }
+        guard !addresses.isEmpty, addresses.allSatisfy(URLPolicy.isPublicAddress), let address = addresses.first else {
+            throw MailError.unsafeURL
+        }
         try Task.checkCancellation()
         let exchange = HTTPSExchange(host: host, address: address)
         let wire = try Self.encode(request)
         return try await withTaskCancellationHandler {
             try await exchange.run(wire)
-        } onCancel: { exchange.cancel() }
+        } onCancel: {
+            exchange.cancel()
+        }
     }
 
     static func resolve(_ host: String) async throws -> [String] {
@@ -92,15 +106,22 @@ public struct PublicHTTPSClient: HTTPTransport {
                 hints.ai_socktype = SOCK_STREAM
                 var answer: UnsafeMutablePointer<addrinfo>?
                 guard getaddrinfo(host, "443", &hints, &answer) == 0, let first = answer else {
-                    continuation.resume(throwing: MailError.dnsFailure); return
+                    continuation.resume(throwing: MailError.dnsFailure)
+                    return
                 }
                 defer { freeaddrinfo(first) }
                 var addresses: [String] = []
                 var cursor: UnsafeMutablePointer<addrinfo>? = first
                 while let entry = cursor {
                     var buffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                    if getnameinfo(entry.pointee.ai_addr, entry.pointee.ai_addrlen, &buffer, socklen_t(buffer.count), nil, 0, NI_NUMERICHOST) == 0 {
-                        addresses.append(String(decoding: buffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self))
+                    if getnameinfo(
+                        entry.pointee.ai_addr, entry.pointee.ai_addrlen, &buffer, socklen_t(buffer.count), nil, 0,
+                        NI_NUMERICHOST) == 0
+                    {
+                        addresses.append(
+                            String(
+                                decoding: buffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self
+                            ))
                     }
                     cursor = entry.pointee.ai_next
                 }
@@ -110,11 +131,16 @@ public struct PublicHTTPSClient: HTTPTransport {
     }
 
     static func encode(_ request: HTTPRequest) throws -> Data {
-        guard let components = URLComponents(url: request.url, resolvingAgainstBaseURL: false), let host = components.host else { throw MailError.unsafeURL }
+        guard let components = URLComponents(url: request.url, resolvingAgainstBaseURL: false),
+            let host = components.host
+        else { throw MailError.unsafeURL }
         var target = components.percentEncodedPath.isEmpty ? "/" : components.percentEncodedPath
         if let query = components.percentEncodedQuery { target += "?" + query }
-        guard !target.utf8.contains(where: { $0 < 33 || $0 == 127 }), !host.contains("\r"), !host.contains("\n") else { throw MailError.unsafeURL }
-        var wire = "\(request.method) \(target) HTTP/1.1\r\nHost: \(host)\r\nUser-Agent: Transorma/1.0\r\nAccept: text/html, text/plain\r\nAccept-Encoding: identity\r\nConnection: close\r\n"
+        guard !target.utf8.contains(where: { $0 < 33 || $0 == 127 }), !host.contains("\r"), !host.contains("\n") else {
+            throw MailError.unsafeURL
+        }
+        var wire =
+            "\(request.method) \(target) HTTP/1.1\r\nHost: \(host)\r\nUser-Agent: Transorma/1.0\r\nAccept: text/html, text/plain\r\nAccept-Encoding: identity\r\nConnection: close\r\n"
         if request.method == "POST" {
             wire += "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: \(request.body?.count ?? 0)\r\n"
         }
@@ -135,11 +161,13 @@ private final class HTTPSExchange: @unchecked Sendable {
         let tls = NWProtocolTLS.Options()
         sec_protocol_options_set_tls_server_name(tls.securityProtocolOptions, host)
         sec_protocol_options_add_tls_application_protocol(tls.securityProtocolOptions, "http/1.1")
-        sec_protocol_options_set_verify_block(tls.securityProtocolOptions, { _, trust, completion in
-            let secTrust = sec_trust_copy_ref(trust).takeRetainedValue()
-            SecTrustSetPolicies(secTrust, SecPolicyCreateSSL(true, host as CFString))
-            completion(SecTrustEvaluateWithError(secTrust, nil))
-        }, queue)
+        sec_protocol_options_set_verify_block(
+            tls.securityProtocolOptions,
+            { _, trust, completion in
+                let secTrust = sec_trust_copy_ref(trust).takeRetainedValue()
+                SecTrustSetPolicies(secTrust, SecPolicyCreateSSL(true, host as CFString))
+                completion(SecTrustEvaluateWithError(secTrust, nil))
+            }, queue)
         let parameters = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
         connection = NWConnection(host: NWEndpoint.Host(address), port: 443, using: parameters)
     }
@@ -147,17 +175,25 @@ private final class HTTPSExchange: @unchecked Sendable {
     func run(_ data: Data) async throws -> HTTPResponse {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
-                if let result = self.result { continuation.resume(with: result); return }
+                if let result = self.result {
+                    continuation.resume(with: result)
+                    return
+                }
                 self.continuation = continuation
                 self.connection.stateUpdateHandler = { state in
                     switch state {
                     case .ready:
                         guard !self.started else { return }
                         self.started = true
-                        self.connection.send(content: data, completion: .contentProcessed { error in
-                            if error != nil { self.finish(.failure(MailError.networkFailure)) }
-                            else { self.receive() }
-                        })
+                        self.connection.send(
+                            content: data,
+                            completion: .contentProcessed { error in
+                                if error != nil {
+                                    self.finish(.failure(MailError.networkFailure))
+                                } else {
+                                    self.receive()
+                                }
+                            })
                     case .failed: self.finish(.failure(MailError.networkFailure))
                     case .cancelled: self.finish(.failure(CancellationError()))
                     default: break
@@ -175,10 +211,15 @@ private final class HTTPSExchange: @unchecked Sendable {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, complete, error in
             guard self.result == nil else { return }
             if let data { self.response += data }
-            guard self.response.count <= 300_000 else { self.finish(.failure(MailError.oversizedResponse)); return }
-            if error != nil { self.finish(.failure(MailError.networkFailure)); return }
-            if complete { self.finish(Result { try HTTPDecoder.decode(self.response) }) }
-            else { self.receive() }
+            guard self.response.count <= 300_000 else {
+                self.finish(.failure(MailError.oversizedResponse))
+                return
+            }
+            if error != nil {
+                self.finish(.failure(MailError.networkFailure))
+                return
+            }
+            if complete { self.finish(Result { try HTTPDecoder.decode(self.response) }) } else { self.receive() }
         }
     }
 
@@ -195,23 +236,34 @@ private final class HTTPSExchange: @unchecked Sendable {
 enum HTTPDecoder {
     static func decode(_ data: Data) throws -> HTTPResponse {
         guard let separator = data.range(of: Data([13, 10, 13, 10])), separator.lowerBound <= 16_384,
-              let head = String(data: data[..<separator.lowerBound], encoding: .utf8) else { throw MailError.networkFailure }
+            let head = String(data: data[..<separator.lowerBound], encoding: .utf8)
+        else { throw MailError.networkFailure }
         let lines = head.components(separatedBy: "\r\n")
         let statusLine = lines[0].components(separatedBy: " ")
         guard statusLine.count >= 2, ["HTTP/1.1", "HTTP/1.0"].contains(statusLine[0]),
-              let status = Int(statusLine[1]), (200...599).contains(status) else { throw MailError.networkFailure }
+            let status = Int(statusLine[1]), (200...599).contains(status)
+        else { throw MailError.networkFailure }
         var headers: [String: String] = [:]
         for line in lines.dropFirst() {
-            guard let colon = line.firstIndex(of: ":"), line.first != " ", line.first != "\t" else { throw MailError.networkFailure }
+            guard let colon = line.firstIndex(of: ":"), line.first != " ", line.first != "\t" else {
+                throw MailError.networkFailure
+            }
             let key = String(line[..<colon]).lowercased()
             let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
-            if headers[key] != nil && ["content-length", "transfer-encoding", "location", "content-type"].contains(key) { throw MailError.networkFailure }
+            if headers[key] != nil && ["content-length", "transfer-encoding", "location", "content-type"].contains(key)
+            {
+                throw MailError.networkFailure
+            }
             headers[key] = value
         }
-        guard headers["content-encoding"] == nil || headers["content-encoding"] == "identity" else { throw MailError.unsupportedPage }
+        guard headers["content-encoding"] == nil || headers["content-encoding"] == "identity" else {
+            throw MailError.unsupportedPage
+        }
         var body = Data(data[separator.upperBound...])
         if let transfer = headers["transfer-encoding"] {
-            guard transfer.lowercased() == "chunked", headers["content-length"] == nil else { throw MailError.networkFailure }
+            guard transfer.lowercased() == "chunked", headers["content-length"] == nil else {
+                throw MailError.networkFailure
+            }
             body = try decodeChunks(body)
         } else if let rawLength = headers["content-length"] {
             guard let length = Int(rawLength), length == body.count else { throw MailError.networkFailure }
@@ -224,12 +276,14 @@ enum HTTPDecoder {
         var output = Data()
         while let end = data.range(of: Data([13, 10]), in: offset..<data.endIndex) {
             guard end.lowerBound - offset <= 100,
-                  let line = String(data: data[offset..<end.lowerBound], encoding: .ascii),
-                  let length = Int(line.components(separatedBy: ";")[0], radix: 16), length >= 0, length <= 300_000 else { throw MailError.networkFailure }
+                let line = String(data: data[offset..<end.lowerBound], encoding: .ascii),
+                let length = Int(line.components(separatedBy: ";")[0], radix: 16), length >= 0, length <= 300_000
+            else { throw MailError.networkFailure }
             offset = end.upperBound
             if length == 0 { return output }
             guard length <= data.endIndex - offset - 2,
-                  data[(offset + length)..<(offset + length + 2)] == Data([13, 10]) else { throw MailError.networkFailure }
+                data[(offset + length)..<(offset + length + 2)] == Data([13, 10])
+            else { throw MailError.networkFailure }
             output += data[offset..<(offset + length)]
             offset += length + 2
         }

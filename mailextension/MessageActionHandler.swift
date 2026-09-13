@@ -22,13 +22,22 @@ final class MessageActionHandler: NSObject, MEMessageActionHandler, @unchecked S
         super.init()
     }
 
-    var requiredHeaders: [String] { ["List-Unsubscribe", "List-Unsubscribe-Post", "List-ID", "DKIM-Signature", "Auto-Submitted"] }
+    var requiredHeaders: [String] {
+        ["List-Unsubscribe", "List-Unsubscribe-Post", "List-ID", "DKIM-Signature", "Auto-Submitted"]
+    }
 
     func decideAction(for message: MEMessage, completionHandler: @escaping (MEMessageActionDecision?) -> Void) {
         guard message.state == .received, message.encryptionState != .encrypted,
-              let store, let engine, let worker else { completionHandler(nil); return }
+            let store, let engine, let worker
+        else {
+            completionHandler(nil)
+            return
+        }
         try? store.heartbeat()
-        guard let settings = try? store.snapshot().settings, settings.enabled else { completionHandler(nil); return }
+        guard let settings = try? store.snapshot().settings, settings.enabled else {
+            completionHandler(nil)
+            return
+        }
         guard let raw = message.rawData else {
             completionHandler(.invokeAgainWithBody)
             return

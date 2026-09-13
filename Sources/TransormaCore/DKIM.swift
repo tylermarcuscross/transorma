@@ -1,7 +1,7 @@
-import Foundation
-import CryptoKit
-import Security
 import CMailSystem
+import CryptoKit
+import Foundation
+import Security
 
 public protocol TXTResolving: Sendable {
     func records(for name: String) async throws -> [String]
@@ -15,7 +15,10 @@ public struct SystemTXTResolver: TXTResolving {
             DispatchQueue.global(qos: .utility).async {
                 var buffer = [CChar](repeating: 0, count: 8192)
                 let length = transorma_query_txt(name, &buffer, buffer.count)
-                guard length > 0 else { continuation.resume(throwing: MailError.dnsFailure); return }
+                guard length > 0 else {
+                    continuation.resume(throwing: MailError.dnsFailure)
+                    return
+                }
                 let text = String(decoding: buffer.prefix(Int(length)).map { UInt8(bitPattern: $0) }, as: UTF8.self)
                 continuation.resume(returning: text.components(separatedBy: "\n").filter { !$0.isEmpty })
             }
@@ -41,34 +44,55 @@ public struct DKIMVerifier: Sendable {
             do {
                 let tags = try Self.tags(header.value)
                 guard tags["v"] == "1", tags["l"] == nil,
-                      let signingDomain = tags["d"]?.lowercased(), signingDomain == domain,
-                      let selector = tags["s"], Self.validDNSName(selector), Self.validDNSName(signingDomain),
-                      let algorithm = tags["a"], ["rsa-sha256", "ed25519-sha256"].contains(algorithm),
-                      tags["q"] == nil || tags["q"] == "dns/txt",
-                      let signedList = tags["h"], let bodyHash = tags["bh"], let signature = tags["b"],
-                      let signatureData = Self.base64(signature) else { continue }
-                if let expires = tags["x"] { guard let time = TimeInterval(expires), time > now.timeIntervalSince1970 else { continue } }
-                if let created = tags["t"] { guard let time = TimeInterval(created), time <= now.timeIntervalSince1970 + 300 else { continue } }
+                    let signingDomain = tags["d"]?.lowercased(), signingDomain == domain,
+                    let selector = tags["s"], Self.validDNSName(selector), Self.validDNSName(signingDomain),
+                    let algorithm = tags["a"], ["rsa-sha256", "ed25519-sha256"].contains(algorithm),
+                    tags["q"] == nil || tags["q"] == "dns/txt",
+                    let signedList = tags["h"], let bodyHash = tags["bh"], let signature = tags["b"],
+                    let signatureData = Self.base64(signature)
+                else { continue }
+                if let expires = tags["x"] {
+                    guard let time = TimeInterval(expires), time > now.timeIntervalSince1970 else { continue }
+                }
+                if let created = tags["t"] {
+                    guard let time = TimeInterval(created), time <= now.timeIntervalSince1970 + 300 else { continue }
+                }
                 if let identity = tags["i"] {
                     guard let identityDomain = identity.split(separator: "@").last.map(String.init),
-                          identityDomain == signingDomain || identityDomain.hasSuffix("." + signingDomain) else { continue }
+                        identityDomain == signingDomain || identityDomain.hasSuffix("." + signingDomain)
+                    else { continue }
                 }
-                let signed = signedList.lowercased().split(separator: ":").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                let signed = signedList.lowercased().split(separator: ":").map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
                 // All fields used for classification must be signed; duplicates cannot reinterpret a valid signature.
-                let required = ["from", "subject", "content-type", "content-transfer-encoding", "list-id", "list-unsubscribe", "list-unsubscribe-post"]
+                let required = [
+                    "from", "subject", "content-type", "content-transfer-encoding", "list-id", "list-unsubscribe",
+                    "list-unsubscribe-post",
+                ]
                 guard signed.contains("from"), signed.contains("subject"),
-                      required.allSatisfy({ message.values($0).count <= 1 && (message.values($0).isEmpty || signed.contains($0)) }) else { continue }
+                    required.allSatisfy({
+                        message.values($0).count <= 1 && (message.values($0).isEmpty || signed.contains($0))
+                    })
+                else { continue }
                 let canon = (tags["c"] ?? "simple/simple").components(separatedBy: "/")
                 let headerMode = canon[0]
                 let bodyMode = canon.count == 2 ? canon[1] : "simple"
-                guard canon.count <= 2, ["simple", "relaxed"].contains(headerMode), ["simple", "relaxed"].contains(bodyMode),
-                      Self.base64(bodyHash) == Data(SHA256.hash(data: Self.canonicalBody(message.body, relaxed: bodyMode == "relaxed"))) else { continue }
+                guard canon.count <= 2, ["simple", "relaxed"].contains(headerMode),
+                    ["simple", "relaxed"].contains(bodyMode),
+                    Self.base64(bodyHash)
+                        == Data(SHA256.hash(data: Self.canonicalBody(message.body, relaxed: bodyMode == "relaxed")))
+                else { continue }
                 var used = Set<Int>()
                 var signedData = Data()
                 for name in signed {
-                    if let index = message.headers.indices.reversed().first(where: { !used.contains($0) && message.headers[$0].name == name }) {
+                    if let index = message.headers.indices.reversed().first(where: {
+                        !used.contains($0) && message.headers[$0].name == name
+                    }) {
                         used.insert(index)
-                        signedData += Self.canonicalHeader(message.headers[index].raw, relaxed: headerMode == "relaxed") + Data([13, 10])
+                        signedData +=
+                            Self.canonicalHeader(message.headers[index].raw, relaxed: headerMode == "relaxed")
+                            + Data([13, 10])
                     }
                 }
                 let emptied = try Self.emptySignature(header.raw)
@@ -76,11 +100,13 @@ public struct DKIMVerifier: Sendable {
                 let records = try await resolver.records(for: selector + "._domainkey." + signingDomain)
                 let keys = records.compactMap { try? Self.tags($0) }.filter { $0["p"] != nil }
                 guard keys.count == 1, let keyTags = keys.first,
-                      keyTags["v"] == nil || keyTags["v"] == "DKIM1",
-                      let encodedKey = keyTags["p"], let keyData = Self.base64(encodedKey), !keyData.isEmpty,
-                      !(keyTags["t"] ?? "").split(separator: ":").contains("y"),
-                      keyTags["h"] == nil || (keyTags["h"] ?? "").split(separator: ":").contains("sha256"),
-                      keyTags["s"] == nil || (keyTags["s"] ?? "").split(separator: ":").contains(where: { $0 == "*" || $0 == "email" }) else { continue }
+                    keyTags["v"] == nil || keyTags["v"] == "DKIM1",
+                    let encodedKey = keyTags["p"], let keyData = Self.base64(encodedKey), !keyData.isEmpty,
+                    !(keyTags["t"] ?? "").split(separator: ":").contains("y"),
+                    keyTags["h"] == nil || (keyTags["h"] ?? "").split(separator: ":").contains("sha256"),
+                    keyTags["s"] == nil
+                        || (keyTags["s"] ?? "").split(separator: ":").contains(where: { $0 == "*" || $0 == "email" })
+                else { continue }
                 let valid: Bool
                 if algorithm == "ed25519-sha256" {
                     guard keyTags["k"] == "ed25519" else { continue }
@@ -88,10 +114,14 @@ public struct DKIMVerifier: Sendable {
                     valid = key.isValidSignature(signatureData, for: Data(SHA256.hash(data: signedData)))
                 } else {
                     guard keyTags["k"] == nil || keyTags["k"] == "rsa" else { continue }
-                    let attributes: [CFString: Any] = [kSecAttrKeyType: kSecAttrKeyTypeRSA, kSecAttrKeyClass: kSecAttrKeyClassPublic]
+                    let attributes: [CFString: Any] = [
+                        kSecAttrKeyType: kSecAttrKeyTypeRSA, kSecAttrKeyClass: kSecAttrKeyClassPublic,
+                    ]
                     guard let key = SecKeyCreateWithData(keyData as CFData, attributes as CFDictionary, nil),
-                          SecKeyGetBlockSize(key) >= 128 else { continue }
-                    valid = SecKeyVerifySignature(key, .rsaSignatureMessagePKCS1v15SHA256, signedData as CFData, signatureData as CFData, nil)
+                        SecKeyGetBlockSize(key) >= 128
+                    else { continue }
+                    valid = SecKeyVerifySignature(
+                        key, .rsaSignatureMessagePKCS1v15SHA256, signedData as CFData, signatureData as CFData, nil)
                 }
                 if valid { return VerifiedMessage(signingDomain: signingDomain, signedHeaders: Set(signed)) }
             } catch { continue }
@@ -100,11 +130,14 @@ public struct DKIMVerifier: Sendable {
     }
 
     static func validDNSName(_ value: String) -> Bool {
-        value.utf8.count <= 253 && value.split(separator: ".", omittingEmptySubsequences: false).allSatisfy {
-            !$0.isEmpty && $0.utf8.count <= 63 && $0.first != "-" && $0.last != "-" && $0.utf8.allSatisfy {
-                (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 || $0 == 95
+        value.utf8.count <= 253
+            && value.split(separator: ".", omittingEmptySubsequences: false).allSatisfy {
+                !$0.isEmpty && $0.utf8.count <= 63 && $0.first != "-" && $0.last != "-"
+                    && $0.utf8.allSatisfy {
+                        (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45
+                            || $0 == 95
+                    }
             }
-        }
     }
 
     static func tags(_ field: String) throws -> [String: String] {
@@ -142,8 +175,9 @@ public struct DKIMVerifier: Sendable {
         var output = Data()
         var pending = false
         for byte in raw {
-            if byte == 32 || byte == 9 { pending = true }
-            else {
+            if byte == 32 || byte == 9 {
+                pending = true
+            } else {
                 if pending && (!trimLeading || !output.isEmpty) { output.append(32) }
                 output.append(byte)
                 pending = false
@@ -160,7 +194,8 @@ public struct DKIMVerifier: Sendable {
         while start < bytes.count {
             let end = bytes[start...].firstIndex(of: 59) ?? bytes.count
             if let equal = bytes[start..<end].firstIndex(of: 61) {
-                let key = String(decoding: bytes[start..<equal], as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+                let key = String(decoding: bytes[start..<equal], as: UTF8.self).trimmingCharacters(
+                    in: .whitespacesAndNewlines)
                 if key == "b" { return Data(bytes[...equal]) + Data(bytes[end...]) }
             }
             start = end + 1

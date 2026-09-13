@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0000000000000000000001 = {isa = PBXBuildFile; productRef = AB0000000000000000000002; };
 		AA0000000000000000000001 = {isa = PBXBuildFile; productRef = AA0000000000000000000011; };
 		AA0000000000000000000002 = {isa = PBXBuildFile; productRef = AA0000000000000000000012; };
 		4F6BAEAB2E441749000D192D /* mailextension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4F6BAE912E441749000D192D /* mailextension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -44,6 +45,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AB0000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TransormaCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F6BAE622E44171E000D192D /* transorma.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = transorma.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F6BAE7A2E44171F000D192D /* transormaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = transormaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F6BAE912E441749000D192D /* mailextension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = mailextension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -60,6 +62,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		AB0000000000000000000004 = {isa = PBXFileSystemSynchronizedRootGroup; path = Tests/TransormaCoreTests; sourceTree = "<group>"; };
 		4F6BAE642E44171E000D192D /* transorma */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = transorma;
@@ -81,6 +84,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AB0000000000000000000005 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (AB0000000000000000000001, ); runOnlyForDeploymentPostprocessing = 0; };
 		4F6BAE5F2E44171E000D192D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,6 +115,7 @@
 			isa = PBXGroup;
 			children = (
 				4F6BAE642E44171E000D192D /* transorma */,
+				AB0000000000000000000004 /* TransormaCoreTests */,
 				4F6BAE7D2E44171F000D192D /* transormaUITests */,
 				4F6BAE922E441749000D192D /* mailextension */,
 				4F6BAE632E44171E000D192D /* Products */,
@@ -121,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				4F6BAE622E44171E000D192D /* transorma.app */,
+				AB0000000000000000000003 /* TransormaCoreTests.xctest */,
 				4F6BAE7A2E44171F000D192D /* transormaUITests.xctest */,
 				4F6BAE912E441749000D192D /* mailextension.appex */,
 			);
@@ -130,6 +136,19 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AB0000000000000000000006 /* TransormaCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000000007;
+			buildPhases = (AB0000000000000000000008, AB0000000000000000000005, );
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (AB0000000000000000000004, );
+			name = TransormaCoreTests;
+			packageProductDependencies = (AB0000000000000000000002, );
+			productName = TransormaCoreTests;
+			productReference = AB0000000000000000000003;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		4F6BAE612E44171E000D192D /* transorma */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4F6BAE842E44171F000D192D /* Build configuration list for PBXNativeTarget "transorma" */;
@@ -238,6 +257,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				AB0000000000000000000006 /* TransormaCoreTests */,
 				4F6BAE612E44171E000D192D /* transorma */,
 				4F6BAE792E44171F000D192D /* transormaUITests */,
 				4F6BAE902E441749000D192D /* mailextension */,
@@ -270,6 +290,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		AB0000000000000000000008 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		4F6BAE5E2E44171E000D192D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -310,11 +331,34 @@
 		AA0000000000000000000021 = {isa = XCLocalSwiftPackageReference; relativePath = .; };
 /* End XCLocalSwiftPackageReference section */
 /* Begin XCSwiftPackageProductDependency section */
+		AB0000000000000000000002 = {isa = XCSwiftPackageProductDependency; productName = TransormaCore; };
 		AA0000000000000000000011 = {isa = XCSwiftPackageProductDependency; productName = TransormaCore; };
 		AA0000000000000000000012 = {isa = XCSwiftPackageProductDependency; productName = TransormaCore; };
 /* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
+		AB0000000000000000000009 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = me.tylercross.transorma.coretests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AB000000000000000000000A = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = me.tylercross.transorma.coretests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 		4F6BAE822E44171F000D192D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -598,6 +642,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AB0000000000000000000007 = {isa = XCConfigurationList; buildConfigurations = (AB0000000000000000000009, AB000000000000000000000A, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		4F6BAE5D2E44171E000D192D /* Build configuration list for PBXProject "transorma" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
