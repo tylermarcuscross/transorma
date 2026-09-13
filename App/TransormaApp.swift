@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct TransormaApp: App {
+    static let mainWindowID = "main"
+
     @NSApplicationDelegateAdaptor(ApplicationDelegate.self) private var lifecycle
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: AppModel
@@ -19,14 +21,24 @@ struct TransormaApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        Window("Transorma", id: Self.mainWindowID) {
             ContentView()
                 .environment(model)
                 .onAppear { lifecycle.start(model) }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { model.refresh() }
+                }
         }
         .defaultSize(width: 1040, height: 800)
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refresh() }
+
+        MenuBarExtra {
+            MenuBarView()
+                .environment(model)
+        } label: {
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .accessibilityLabel("Transorma")
+                .accessibilityIdentifier("transorma-menu-bar")
         }
     }
 }

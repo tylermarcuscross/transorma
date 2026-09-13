@@ -55,7 +55,7 @@ Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processi
 - An Apple Intelligence fallback for an explicit unsubscribe link in authenticated mail. It supports bounded same-host navigation and simple HTML forms. The model chooses from validated actions; application code constructs requests.
 - Optional macOS 27 Private Cloud Compute reasoning after local inference, guarded by both user opt-in and the actual signing entitlement. Default entitlements do not enable PCC.
 - A persistent bounded queue with exclusive cross-process claims, consent checks before network writes, explicit temporary-error backoff, seven-day expiry, and token removal after completion.
-- Activity history, pause, keep list, login launch, and in-app privacy information.
+- Activity history, pause, keep list, login launch, in-app privacy information, and a menu bar control for opening the app or pausing protection.
 
 ## Running against Mail
 

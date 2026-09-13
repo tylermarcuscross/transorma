@@ -10,8 +10,8 @@ There is no application backend to build or deploy. `xcode-build-server` is a lo
 App/
   TransormaApp.swift          Entry point and application lifetime
   AppModel.swift             Observable state and user actions
-  Views/                    Navigation and four app screens
-  Resources/                Assets, privacy manifest, entitlements
+  Views/                    Navigation, four screens, and the menu bar
+  Resources/                Icon Composer artwork, assets, manifest, entitlements
 TransormaMailExtension/
   MailExtension.swift       MailKit entry point
   MessageActionHandler.swift
@@ -71,7 +71,7 @@ The app and extension can both drain the queue. Claiming a job marks it as proce
 
 The refactor preserves the existing App Group identifier, state version, Codable field names, job kinds/status values, and duplicate fingerprints. Moving files does not reset user settings or pending jobs.
 
-The worker and assessment engine are actors. The UI model uses `@MainActor` and Observation's `@Observable`; views read it through SwiftUI's environment. The application delegate owns the worker task and cancels it when the app terminates. Closing a window does not own or cancel unsubscribe processing. Store snapshots refresh while the live worker runs and when the app becomes active.
+The worker and assessment engine are actors. The UI model uses `@MainActor` and Observation's `@Observable`; views read it through SwiftUI's environment. The dashboard and menu bar share that one model. The application delegate owns the worker task and cancels it when the app terminates. Closing a window does not own or cancel unsubscribe processing. The menu can reopen the dashboard or pause protection. Store snapshots refresh while the live worker runs, when the app becomes active, and when its menu opens.
 
 Production and preview composition are explicit `AppModel.live()` and `.preview()` factories. Development builds always use disposable storage with no worker; the extension also disables processing in that configuration. Preview state is injected into the actual views, and native UI tests exercise the actual application. A separate preview executable is unnecessary.
 

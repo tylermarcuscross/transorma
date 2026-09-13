@@ -1,0 +1,44 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.00000,0.49020,0.51765,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "Monogram.svg",
+          "name": "Transorma T"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.15
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "Fold.svg",
+          "name": "Paper fold"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.2
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.25
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

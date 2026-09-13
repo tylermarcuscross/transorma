@@ -8,9 +8,7 @@ final class TransormaUITests: XCTestCase {
 
     @MainActor
     func testProtectionRequiresExplicitOptIn() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"]
-        app.launch()
+        let app = launchApp()
         XCTAssertTrue(app.staticTexts["Less marketing. More mail."].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
         let toggle = app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch
@@ -27,9 +25,7 @@ final class TransormaUITests: XCTestCase {
 
     @MainActor
     func testKeepListRecoversAfterInvalidInput() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"]
-        app.launch()
+        let app = launchApp()
         let keepList = app.outlines.staticTexts["Keep list"]
         XCTAssertTrue(keepList.waitForExistence(timeout: 10))
         keepList.click()
@@ -58,12 +54,46 @@ final class TransormaUITests: XCTestCase {
 
     @MainActor
     func testPrivacyIsAccessibleBeforeEnablingProtection() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"]
-        app.launch()
+        let app = launchApp()
         let privacy = app.outlines.staticTexts["Privacy"]
         XCTAssertTrue(privacy.waitForExistence(timeout: 10))
         privacy.click()
         XCTAssertTrue(app.staticTexts["Your mail stays yours."].waitForExistence(timeout: 3))
+    }
+
+    @MainActor
+    func testMenuBarSharesProtectionStateAndReopensWindow() throws {
+        let app = launchApp()
+        XCTAssertTrue(app.staticTexts["Protection is paused"].waitForExistence(timeout: 10))
+
+        let menuBarItem = app.descendants(matching: .any).matching(identifier: "transorma-menu-bar").firstMatch
+        XCTAssertTrue(menuBarItem.waitForExistence(timeout: 3))
+        menuBarItem.click()
+        app.menuItems["Open Transorma"].click()
+        XCTAssertEqual(app.windows.count, 1)
+        menuBarItem.click()
+        app.menuItems["Automatic Protection"].click()
+        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for incoming mail"].waitForExistence(timeout: 3))
+
+        app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertEqual(app.windows.count, 0)
+        menuBarItem.click()
+        app.menuItems["Open Transorma"].click()
+        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for incoming mail"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.windows.count, 1)
+    }
+
+    @MainActor
+    private func launchApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        // XCTest can launch a menu bar app without the normal event that opens its dashboard.
+        let menuBarItem = app.descendants(matching: .any).matching(identifier: "transorma-menu-bar").firstMatch
+        XCTAssertTrue(menuBarItem.waitForExistence(timeout: 5))
+        menuBarItem.click()
+        app.menuItems["Open Transorma"].click()
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 5))
+        return app
     }
 }

@@ -45,7 +45,7 @@ The protected shared folder contains settings, bounded activity, pending unsubsc
 ## App Store submission
 
 - Produce and validate a developer-signed archive with the release Xcode toolchain. An unsigned Xcode 27 RC archive has passed local packaging checks; it is not a store-ready archive.
-- Add final app artwork, screenshots, description, support URL, and a publicly hosted privacy-policy URL. The in-app policy is implemented; hosting and App Store Connect metadata are not.
+- Review the development icon in the signed app and Mail extension, and prepare final screenshots, description, support URL, and a publicly hosted privacy-policy URL. The in-app policy is implemented; hosting and App Store Connect metadata are not.
 - Review the privacy manifests and App Store privacy answers against final behavior, including optional PCC and unsubscribe websites. The manifests currently declare no tracking, no developer-collected data, and no required-reason APIs. Revisit if storage, diagnostics, analytics, or APIs change.
 - Explain the one-time consent, automatic website requests, Trash behavior, preserve-on-uncertainty policy, and limitations in reviewer notes. [RFC 8058 §3.2](https://www.rfc-editor.org/rfc/rfc8058) requires consent but leaves its timing and form unspecified; this app requests consent during setup.
 - Provide a reproducible dedicated-mailbox test route and signed fixtures or a controlled sender for reviewers. Supply instructions for enabling Mail content access and testing with Apple Intelligence unavailable.

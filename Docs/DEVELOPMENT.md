@@ -22,6 +22,23 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make doctor
 
 Selecting Xcode in **Xcode → Settings → Locations → Command Line Tools** also configures ordinary terminals. No separate Swift installation, formatter package, or model download script is required.
 
+## VS Code profiles
+
+Use a dedicated **Transorma** profile to keep work-repository extensions and settings out of this project. VS Code remembers the profile associated with a folder and activates it when that folder is opened again. The Default profile keeps its existing configuration. [VS Code profiles](https://code.visualstudio.com/docs/configure/profiles) are local editor preferences, so this association is not committed to the repository.
+
+To set this up on another machine, create an empty profile named **Transorma** using **Profiles: New Profile** in the Command Palette, install the recommended Swift extension, and open this repository with that profile. Swift installs its LLDB debugger dependency. Add Codex or other tools you use here separately; appearance extensions can also be installed in the profile.
+
+The equivalent [CLI commands](https://code.visualstudio.com/docs/configure/command-line) are:
+
+```sh
+code . --profile Transorma
+code --install-extension swiftlang.swift-vscode --profile Transorma
+```
+
+The first command creates the profile if necessary and associates it with the repository. To activate an existing profile in an already open window, use **Profiles: Switch Profile → Transorma**. On macOS, **Shell Command: Install 'code' command in PATH** makes `code` available in a terminal.
+
+For a one-off exception, an extension's gear menu has **Disable (Workspace)**. The recommendations in `.vscode/extensions.json` suggest useful extensions; they do not disable unrelated ones or act as an allowlist. Use a profile when both extension availability and user settings need to differ by project. Settings or extensions explicitly applied to all profiles remain shared.
+
 ## Workspace and repository layout
 
 Top-level maintained folders use capitalized names: `App`, `Config`, `Docs`, `Scripts`, `Sources`, `Tests`, and `TransormaMailExtension`. VS Code sorts folders alphabetically and hides generated state so those folders are easy to scan. Shared editor and formatting configuration remains visible at the root.
@@ -86,6 +103,14 @@ To test real Mail integration, use Debug in the scheme and configure the team an
 
 SwiftUI `#Preview` declarations render the same app views with isolated state in Xcode. `make run` and F5 launch the actual app; UI tests attach a screenshot to their Xcode result bundle.
 
+## App and menu bar artwork
+
+`App/Resources/AppIcon.icon` is the editable Icon Composer source. It contains a teal background and two small SVG layers forming a folded-paper T. Xcode compiles that same source into both the companion app and Mail extension, including the native Liquid Glass appearances and fallback icon resources. Open the `.icon` bundle in Xcode's **Open Developer Tool → Icon Composer** to adjust its layers. The empty placeholder app-icon asset has been removed.
+
+The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`, a separate monochrome SVG marked as a template image. macOS supplies its color for the current menu bar appearance. The menu is available while Transorma runs, including after its window closes; it shows protection state and provides Open, protection toggle, and Quit actions. Development builds still use isolated settings and no worker.
+
+Rendered previews and compiled icon binaries belong under `.build/`; the small vector sources and Icon Composer document belong in Git. [Apple's Icon Composer guide](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer) describes the native layered format.
+
 ## Formatting and code checks
 
 We use Xcode's bundled **swift-format** for formatting and strict style linting. `.swift-format` sets four-space indentation and a 120-column target; other rules retain the tool's defaults. The official Swift extension uses the same formatting technology on save. Compiler warnings are errors in both native targets (`Config/Shared.xcconfig`) and Swift package targets (`Package.swift`). Swift 6 language mode enforces concurrency checking.
@@ -105,7 +130,7 @@ The [adapter documentation](https://github.com/SolaWing/xcode-build-server) expl
 | --- | --- |
 | `App/TransormaApp.swift` | App composition and application lifetime. |
 | `App/AppModel.swift` | Observable UI state and actions backed by shared storage. |
-| `App/Views` | Protection, activity, keep-list, and privacy views. |
+| `App/Views` | Dashboard navigation, protection, activity, keep-list, privacy, and menu bar views. |
 | `TransormaMailExtension` | MailKit callbacks and extension packaging. |
 | `Sources/TransormaCore/Mail` | Byte-preserving message parsing and signature verification. |
 | `Sources/TransormaCore/Protection` | Settings, classification policy, and message assessment. |
@@ -129,7 +154,9 @@ Run **Transorma: rebuild index**, then **Swift: Restart LSP Server** or **Develo
 
 A missing import usually indicates incorrect compiler settings rather than a dependency to install. If the build fails, fix its first compiler error. If only the editor fails, inspect **View → Output → Swift** and confirm the selected Xcode path and the adapter reported by `make doctor`. The parser's latest output is in `.build/index.log`.
 
-Incremental builds sometimes contain no compiler commands. `make index` therefore replays retained build logs and keeps the newest valid Development command for each module. If those logs were removed, `make reindex` creates fresh ones.
+Incremental builds sometimes contain no compiler commands, and Xcode rotates older logs. `make index` retains valid settings from the previous index, then applies the newest Development commands from available logs. It refreshes source membership from current response files and discards settings for another toolchain or SDK. `make reindex` creates fresh logs and settings after a clean build.
+
+`Package.swift` is compiled separately by SwiftPM, so it needs its own editor settings. `make index` adds the selected toolchain's `PackageDescription` module path and the manifest's `swift-tools-version` to the compiler database. Run it after changing that version or switching Xcode. This fixes missing-module errors in the manifest while keeping normal compiler diagnostics enabled.
 
 ## Working directly on main
 
