@@ -9,7 +9,9 @@ struct PreviewRenderer {
         let output = URL(fileURLWithPath: CommandLine.arguments[1])
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1080, height: 920), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1080, height: 920), styleMask: [.titled, .closable],
+            backing: .buffered, defer: false)
         let hosting = NSHostingView(rootView: ContentView().environmentObject(ProtectionModel()))
         window.contentView = hosting
         window.title = "Transorma Preview"

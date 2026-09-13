@@ -1,5 +1,5 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 public struct ProtectionSettings: Codable, Sendable, Equatable {
     public var enabled = false

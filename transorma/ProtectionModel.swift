@@ -1,5 +1,5 @@
-import SwiftUI
 import ServiceManagement
+import SwiftUI
 import TransormaCore
 
 @MainActor
@@ -15,15 +15,17 @@ final class ProtectionModel: ObservableObject {
     init() {
         do {
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-                let previewStore = try SharedStore(directory: FileManager.default.temporaryDirectory.appendingPathComponent("TransormaPreview-" + UUID().uuidString))
-                let previewSnapshot = try previewStore.snapshot()
-                store = previewStore
-                worker = nil
-                snapshot = previewSnapshot
-                storageReady = true
-                return
-            }
+                if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+                    let previewStore = try SharedStore(
+                        directory: FileManager.default.temporaryDirectory.appendingPathComponent(
+                            "TransormaPreview-" + UUID().uuidString))
+                    let previewSnapshot = try previewStore.snapshot()
+                    store = previewStore
+                    worker = nil
+                    snapshot = previewSnapshot
+                    storageReady = true
+                    return
+                }
             #endif
             let store = try SharedStore.appGroup()
             let snapshot = try store.snapshot()
@@ -32,8 +34,10 @@ final class ProtectionModel: ObservableObject {
             self.snapshot = snapshot
             storageReady = true
         } catch {
-            store = nil; worker = nil
-            self.error = "Shared protection storage is unavailable. Use a signed build with the Transorma App Group enabled."
+            store = nil
+            worker = nil
+            self.error =
+                "Shared protection storage is unavailable. Use a signed build with the Transorma App Group enabled."
         }
     }
 
@@ -51,8 +55,14 @@ final class ProtectionModel: ObservableObject {
 
     func refresh() {
         guard let store else { return }
-        do { snapshot = try store.snapshot(); storageReady = true }
-        catch { self.error = "Protection state could not be read. Automatic processing is paused until storage is available."; storageReady = false }
+        do {
+            snapshot = try store.snapshot()
+            storageReady = true
+        } catch {
+            self.error =
+                "Protection state could not be read. Automatic processing is paused until storage is available."
+            storageReady = false
+        }
     }
 
     func update(_ change: (inout ProtectionSettings) -> Void) {
@@ -69,7 +79,8 @@ final class ProtectionModel: ObservableObject {
     func keep(_ entry: String) {
         let entry = entry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard entry.count <= 254, entry.contains("."), !entry.contains(where: \.isWhitespace), !entry.contains("/"),
-              entry.range(of: #"^[a-z0-9._%+\-]+(?:@[a-z0-9.\-]+)?$"#, options: .regularExpression) != nil else {
+            entry.range(of: #"^[a-z0-9._%+\-]+(?:@[a-z0-9.\-]+)?$"#, options: .regularExpression) != nil
+        else {
             error = "Enter an email address or domain, such as news@example.com or example.com."
             return
         }
@@ -77,16 +88,20 @@ final class ProtectionModel: ObservableObject {
     }
 
     func clearHistory() {
-        do { try store?.clearHistory(); refresh() }
-        catch { self.error = "Activity could not be cleared." }
+        do {
+            try store?.clearHistory()
+            refresh()
+        } catch { self.error = "Activity could not be cleared." }
     }
 
     func setLogin(_ enabled: Bool) {
         do {
-            if enabled { try SMAppService.mainApp.register() }
-            else { try SMAppService.mainApp.unregister() }
+            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             startsAtLogin = SMAppService.mainApp.status == .enabled
             if SMAppService.mainApp.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-        } catch { self.error = "Login access could not be updated. Check System Settings → General → Login Items & Extensions." }
+        } catch {
+            self.error =
+                "Login access could not be updated. Check System Settings → General → Login Items & Extensions."
+        }
     }
 }

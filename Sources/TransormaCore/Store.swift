@@ -1,5 +1,5 @@
-import Foundation
 import Darwin
+import Foundation
 
 public struct StoreSnapshot: Codable, Sendable {
     public var version = 1
@@ -18,7 +18,8 @@ public final class SharedStore: @unchecked Sendable {
     public static let groupIdentifier = "group.me.tylercross.transorma"
 
     public static func appGroup() throws -> SharedStore {
-        guard let directory = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier) else {
+        guard let directory = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)
+        else {
             throw MailError.storageUnavailable
         }
         return try SharedStore(directory: directory.appendingPathComponent("Protection", isDirectory: true))
@@ -26,7 +27,8 @@ public final class SharedStore: @unchecked Sendable {
 
     public init(directory: URL) throws {
         self.directory = directory
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try FileManager.default.createDirectory(
+            at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     }
 
     public func snapshot() throws -> StoreSnapshot { try transaction(write: false) { $0 } }
@@ -53,7 +55,11 @@ public final class SharedStore: @unchecked Sendable {
         try transaction { state in
             guard state.settings.enabled, !state.settings.allows(job.sender) else { throw MailError.paused }
             prune(&state, now: job.createdAt)
-            if state.recentRequests[job.id] != nil || state.jobs.contains(where: { $0.id == job.id && $0.status != .cancelled }) { return false }
+            if state.recentRequests[job.id] != nil
+                || state.jobs.contains(where: { $0.id == job.id && $0.status != .cancelled })
+            {
+                return false
+            }
             state.jobs.removeAll { $0.id == job.id }
             guard state.jobs.count < 200, state.recentRequests.count < 2000 else { throw MailError.queueFull }
             state.jobs.append(job)
@@ -65,13 +71,17 @@ public final class SharedStore: @unchecked Sendable {
         try transaction { state in
             prune(&state, now: now)
             // A killed process may have sent a POST. Never silently replay that work.
-            for index in state.jobs.indices where state.jobs[index].status == .processing && now.timeIntervalSince(state.jobs[index].updatedAt) > 180 {
+            for index in state.jobs.indices
+            where state.jobs[index].status == .processing && now.timeIntervalSince(state.jobs[index].updatedAt) > 180 {
                 state.jobs[index].status = .uncertain
                 state.jobs[index].url = nil
                 state.jobs[index].detail = "Processing was interrupted; the remote outcome is unknown."
             }
             guard state.settings.enabled, !state.jobs.contains(where: { $0.status == .processing }),
-                  let index = state.jobs.firstIndex(where: { $0.status == .pending && $0.nextAttempt <= now && !state.settings.allows($0.sender) }) else { return nil }
+                let index = state.jobs.firstIndex(where: {
+                    $0.status == .pending && $0.nextAttempt <= now && !state.settings.allows($0.sender)
+                })
+            else { return nil }
             state.jobs[index].status = .processing
             state.jobs[index].attempts += 1
             state.jobs[index].updatedAt = now
@@ -80,9 +90,12 @@ public final class SharedStore: @unchecked Sendable {
         }
     }
 
-    public func finish(_ job: UnsubscribeJob, status: JobStatus, detail: String, retry: Bool = false, now: Date = .now) throws {
+    public func finish(_ job: UnsubscribeJob, status: JobStatus, detail: String, retry: Bool = false, now: Date = .now)
+        throws
+    {
         try transaction { state in
-            guard let index = state.jobs.firstIndex(where: { $0.id == job.id }), state.jobs[index].status == .processing else { return }
+            guard let index = state.jobs.firstIndex(where: { $0.id == job.id }), state.jobs[index].status == .processing
+            else { return }
             state.jobs[index].updatedAt = now
             state.jobs[index].detail = detail
             if retry && job.attempts < 3 && state.settings.enabled && !state.settings.allows(job.sender) {
@@ -90,7 +103,7 @@ public final class SharedStore: @unchecked Sendable {
                 state.jobs[index].nextAttempt = now.addingTimeInterval(pow(2, Double(job.attempts)) * 60)
             } else {
                 state.jobs[index].status = status
-                state.jobs[index].url = nil // Unsubscribe tokens are retained only while work is pending.
+                state.jobs[index].url = nil  // Unsubscribe tokens are retained only while work is pending.
             }
         }
     }
@@ -118,7 +131,9 @@ public final class SharedStore: @unchecked Sendable {
         var state = StoreSnapshot()
         if FileManager.default.fileExists(atPath: file.path) {
             let data = try Data(contentsOf: file)
-            guard data.count <= 4_000_000, let stored = try? JSONDecoder().decode(StoreSnapshot.self, from: data), stored.version == 1 else { throw MailError.corruptStore }
+            guard data.count <= 4_000_000, let stored = try? JSONDecoder().decode(StoreSnapshot.self, from: data),
+                stored.version == 1
+            else { throw MailError.corruptStore }
             state = stored
         }
         let result = try body(&state)

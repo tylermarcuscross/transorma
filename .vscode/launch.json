@@ -1,5 +1,17 @@
 {
+    "version": "0.2.0",
     "configurations": [
+        {
+            "name": "Transorma: isolated UI",
+            "type": "swift",
+            "request": "launch",
+            "program": "${workspaceFolder}/.build/Xcode/Build/Products/Debug/transorma.app/Contents/MacOS/transorma",
+            "args": [
+                "--ui-testing"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Transorma: build"
+        },
         {
             "type": "swift",
             "request": "launch",

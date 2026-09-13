@@ -1,0 +1,64 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Transorma: rebuild index",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/build.sh", "clean", "build-for-testing"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: build",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/build.sh"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: test core",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/test-core.sh"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": { "kind": "test", "isDefault": true },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: test UI",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/build.sh", "test", "-only-testing:transormaUITests"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "test",
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: lint",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/style.sh", "lint"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: format",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/style.sh", "format"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$swiftc"
+        },
+        {
+            "label": "Transorma: verify",
+            "type": "process",
+            "command": "/bin/zsh",
+            "args": ["scripts/verify.sh"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$swiftc"
+        }
+    ]
+}
