@@ -27,7 +27,6 @@ struct ContentView: View {
         NavigationSplitView {
             List(Section.allCases, selection: $section) { item in
                 Label(item.rawValue, systemImage: item.symbol)
-                    .foregroundStyle(section == item ? Color.white : Color.primary)
                     .tag(item)
             }
             .navigationTitle("Transorma")
@@ -42,7 +41,7 @@ struct ContentView: View {
                     if let error = model.error {
                         Label(error, systemImage: "exclamationmark.triangle")
                             .font(.callout).padding().frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
                     }
                     switch section {
                     case .protection: ProtectionView()
@@ -57,7 +56,7 @@ struct ContentView: View {
             .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(minWidth: 820, minHeight: 640)
-        .tint(.teal)
+        .tint(.accentColor)
     }
 }
 

@@ -17,7 +17,7 @@ struct KeepListView: View {
             }
             ForEach(model.snapshot.settings.allowedSenders, id: \.self) { entry in
                 HStack {
-                    Label(entry, systemImage: "heart.fill").foregroundStyle(.teal)
+                    Label(entry, systemImage: "heart.fill")
                     Spacer()
                     Button("Remove") { model.removeKeptSender(entry) }
                 }.padding(12).background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))

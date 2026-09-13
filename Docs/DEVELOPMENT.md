@@ -105,9 +105,11 @@ SwiftUI `#Preview` declarations render the same app views with isolated state in
 
 ## App and menu bar artwork
 
-`App/Resources/AppIcon.icon` is the editable Icon Composer source. It contains a teal background and two small SVG layers forming a folded-paper T. Xcode compiles that same source into both the companion app and Mail extension, including the native Liquid Glass appearances and fallback icon resources. Open the `.icon` bundle in Xcode's **Open Developer Tool → Icon Composer** to adjust its layers. The empty placeholder app-icon asset has been removed.
+`App/Resources/AppIcon.icon` is the editable Icon Composer source. It contains a graphite background and two SVG layers forming a large white T with a silver paper fold. The monochrome palette takes its cues from black-and-white photographs of industrial mail sorting. Xcode compiles that same source into both the companion app and Mail extension, including the native Liquid Glass appearances and fallback icon resources. Open the `.icon` bundle in Xcode's **Open Developer Tool → Icon Composer** to adjust its layers.
 
 The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`, a separate monochrome SVG marked as a template image. macOS supplies its color for the current menu bar appearance. The menu is available while Transorma runs, including after its window closes; it shows protection state and provides Open, protection toggle, and Quit actions. Development builds still use isolated settings and no worker.
+
+The app uses the adaptive grayscale `AccentColor` asset with native primary/secondary text and neutral surfaces. Sidebar selection follows the system's contrasting foreground, while status labels retain their text and symbols so meaning does not depend on color.
 
 Rendered previews and compiled icon binaries belong under `.build/`; the small vector sources and Icon Composer document belong in Git. [Apple's Icon Composer guide](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer) describes the native layered format.
 

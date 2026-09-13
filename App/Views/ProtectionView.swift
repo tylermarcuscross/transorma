@@ -8,8 +8,8 @@ struct ProtectionView: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack(spacing: 18) {
                 Image(systemName: "envelope.badge.shield.half.filled")
-                    .font(.system(size: 38, weight: .light)).foregroundStyle(.teal)
-                    .frame(width: 80, height: 80).background(.teal.opacity(0.1), in: RoundedRectangle(cornerRadius: 22))
+                    .font(.system(size: 38, weight: .light)).foregroundStyle(.primary)
+                    .frame(width: 80, height: 80).background(.quaternary, in: RoundedRectangle(cornerRadius: 22))
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Less marketing. More mail.").font(.largeTitle.bold())
                     Text("Automatic unsubscribe for Apple Mail.").foregroundStyle(.secondary)
@@ -33,7 +33,7 @@ struct ProtectionView: View {
                         systemImage: model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle"
                     )
                     .font(.callout.weight(.medium)).foregroundStyle(
-                        model.snapshot.settings.enabled ? .teal : .secondary)
+                        model.snapshot.settings.enabled ? .primary : .secondary)
                 }.padding(12)
             }
             GroupBox("Connect to Apple Mail") {
