@@ -18,24 +18,29 @@ final class transormaUITests: XCTestCase {
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testProtectionRequiresExplicitOptIn() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.staticTexts["Less marketing. More mail."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
+        let toggle = app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch
+        XCTAssertTrue(toggle.exists)
+        toggle.click()
+        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for incoming mail"].waitForExistence(timeout: 3))
+        toggle.click()
+        XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+    func testPrivacyIsAccessibleBeforeEnablingProtection() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        let privacy = app.outlines.staticTexts["Privacy"]
+        XCTAssertTrue(privacy.waitForExistence(timeout: 10))
+        privacy.click()
+        XCTAssertTrue(app.staticTexts["Your mail stays yours."].waitForExistence(timeout: 3))
     }
 }
