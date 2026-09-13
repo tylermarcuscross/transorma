@@ -1,0 +1,6 @@
+module CMailSystem [system] {
+    header "shim.h"
+    link "xml2"
+    link "resolv"
+    export *
+}

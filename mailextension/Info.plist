@@ -8,10 +8,7 @@
 		<dict>
 			<key>MEExtensionCapabilities</key>
 			<array>
-				<string>MEContentBlocker</string>
 				<string>MEMessageActionHandler</string>
-				<string>MEComposeSessionHandler</string>
-				<string>MEMessageSecurityHandler</string>
 			</array>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
