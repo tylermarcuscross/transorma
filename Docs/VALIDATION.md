@@ -2,10 +2,11 @@
 
 Environment: Apple silicon, macOS 27.0 RC (26A428), Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 RC (27A266a) at `/Applications/Xcode-27.app`, macOS 27 SDK. Project tooling selects this Xcode even when system-wide `xcode-select` points to Command Line Tools.
 
-## Menu bar accent
+## App and menu bar accents
 
 - The menu bar T now has a small red paper fold. The 18-point vector asset supplies black/light and white/dark variants, using original rendering to preserve the accent.
 - `make build`, `make lint`, and whitespace checks pass. Both compiled asset appearances and the actual menu bar icon were visually reviewed. Temporary previews remain ignored under `.build/MenuBarAccentReview`.
+- The separate Icon Composer artwork now uses the same red fold for the Dock and Finder icon. `make build` and `make run` pass; the compiled icon and actual Dock item were visually verified after closing older development instances. Captures remain ignored under `.build/DockAccentReview`.
 
 ## Simplified activation and Mail setup
 
