@@ -8,7 +8,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             GroupBox {
                 Toggle(isOn: setting(\.enabled)) {
-                    Text("Activate Transorma")
+                    Text(model.isPreview ? "Preview activation" : "Activate Transorma")
                         .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .toggleStyle(.switch)
@@ -117,7 +117,8 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(
                         model.protectionStatus,
-                        systemImage: model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle"
+                        systemImage: model.isPreview
+                            ? "hammer" : (model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle")
                     )
                     .font(.callout.weight(.medium)).foregroundStyle(.secondary)
                     if let last = model.snapshot.lastMailActivity {

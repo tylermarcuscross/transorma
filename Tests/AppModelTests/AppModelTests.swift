@@ -119,7 +119,10 @@ struct AppModelTests {
         let first = AppModel.preview()
         let second = AppModel.preview()
 
+        #expect(first.isPreview)
+        #expect(first.protectionStatus == "Preview activation is off")
         #expect(first.updateSettings { $0.enabled = true })
+        #expect(first.protectionStatus == "Preview activation is on")
         #expect(!second.snapshot.settings.enabled)
         #expect(!first.canManageLoginItem)
         first.configureLoginAtFirstLaunch()

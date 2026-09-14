@@ -10,12 +10,13 @@ XCODEBUILD := $(TOOLCHAIN) xcodebuild -project $(PROJECT) -scheme $(SCHEME) \
 DEVELOPMENT_BUILD := $(XCODEBUILD) -configuration Development
 SWIFT_FILES := Package.swift App TransormaMailExtension Sources Tests
 
-.PHONY: help build run xcode clean test test-core test-unit test-ui build-diagnostics lint format verify index reindex archive-unsigned doctor
+.PHONY: help build build-signed run xcode clean test test-core test-unit test-ui build-diagnostics lint format verify index reindex archive-unsigned doctor
 
 help:
 	@printf '%s\n' \
 		'make build             Build the development app, extension, and test bundles' \
-		'make run               Open the development app with isolated settings' \
+		'make build-signed      Build the Mail-enabled Debug app using your Xcode account' \
+		'make run               Open the UI preview (no email processing)' \
 		'make xcode             Open the native project in Xcode' \
 		'make clean             Remove generated builds, archives, and editor indexes' \
 		'make test              Run all Xcode tests, including UI automation' \
@@ -32,7 +33,11 @@ build:
 	$(DEVELOPMENT_BUILD) build-for-testing
 	/bin/zsh Scripts/editor.sh index --if-installed
 
+build-signed:
+	$(XCODEBUILD) -configuration Debug -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+
 run: build
+	@printf '%s\n' 'Opening the development preview. This build does not unsubscribe or move email.'
 	open -n .build/Xcode/Build/Products/Development/Transorma.app
 
 xcode:

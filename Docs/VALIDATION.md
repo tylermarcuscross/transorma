@@ -1,6 +1,16 @@
-# Validation record — September 13, 2026
+# Validation record — September 14, 2026
 
 Environment: Apple silicon, macOS 27.0 RC (26A428), Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 RC (27A266a) at `/Applications/Xcode-27.app`, macOS 27 SDK. Project tooling selects this Xcode even when system-wide `xcode-select` points to Command Line Tools.
+
+## Missed promotion investigation
+
+- Read-only process and PlugInKit checks confirmed the running companion and enabled Mail extension both came from `.build/Xcode/Build/Products/Development`. That configuration disables all mail processing, regardless of the preview's activation setting. The model now marks preview state explicitly; Settings and Activity show a persistent notice, and the activation label/status no longer claim live protection. `make run` prints the same limitation.
+- Screenshot-based experiments exposed possible coverage gaps in the existing footer and offer-phrase rules. Those classifier changes and their additional tests were removed from this setup fix: they were unrelated to the confirmed inactive-preview cause and require separate review against the original message. The deferred experiment is saved under ignored `.build/DeferredOfferPolicy/`; `MarketingPolicy.swift` remains unchanged.
+- After narrowing the change, `make verify` passes: **57 core tests and 15 app model/login tests**, strict formatting, native Development packaging, and whitespace checks. The preview regression verifies that toggling its temporary settings never reports live protection.
+- The two Settings/Activity UI tests pass, including preview labeling and toggling. The menu navigation test was interrupted by other foreground application windows and failed to find a hit point; that check remains incomplete for this run. Its failure log and all temporary diagnostics remain ignored under `.build/`. The editor index was refreshed by `make verify`.
+- Added `make build-signed` and a matching VS Code task for Debug with automatic provisioning and destination-device registration. The first attempt lacked an Xcode account. After account sign-in, Xcode registered this Mac and generated Apple Development signing assets; **the signed Debug build now succeeds**.
+- `codesign --verify --deep --strict` passes using macOS trust services. The app and embedded extension both carry the sandbox, network client, and shared `group.me.tylercross.transorma` entitlements, with matching development profiles expiring September 14, 2027. Output is `.build/Xcode/Build/Products/Debug/Transorma.app`. This verifies packaging and signing, not an installed Mail processing session.
+- No mailbox content was read, no messages were moved, and no unsubscribe website was contacted. The actual Equinox headers, signature, and unsubscribe route have not been inspected. Signing alone does not establish that the original message would be processed successfully.
 
 ## Default login launch
 

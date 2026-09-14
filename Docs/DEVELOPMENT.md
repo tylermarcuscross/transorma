@@ -58,6 +58,7 @@ Third-party attribution lives in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md
 | Action | VS Code | Terminal |
 | --- | --- | --- |
 | Build app, extension, diagnostics, and test bundles | **⇧⌘B** | `make build` |
+| Build the signed app for real Mail integration | **Transorma: build signed app** task | `make build-signed` |
 | Debug the companion app | **F5 → Transorma: isolated UI** | `make run` opens it without a debugger |
 | Open the native project | **Transorma: open Xcode** | `make xcode` |
 | Run core tests | **Transorma: test core** | `make test-core` |
@@ -100,6 +101,10 @@ Open `Transorma.xcodeproj` and select the shared **Transorma** scheme. **⌘R** 
 `Config/Shared.xcconfig` contains common compiler settings. `Development.xcconfig`, `Debug.xcconfig`, and `Release.xcconfig` express configuration differences. Development isolation is selected at compile time, so F5 and `make run` do not need a special launch argument. Settings reset on each launch; login-item registration is unavailable in this mode.
 
 To test real Mail integration, use Debug in the scheme and configure the team and App Group as described in [release preparation](RELEASE.md). Keep the checked-in shared scheme on Development for routine work.
+
+`make build-signed` builds Debug with automatic provisioning through the Apple Account added to Xcode, registering the destination Mac for development when necessary. It does not install or launch the result. Output stays in `.build/Xcode/Build/Products/Debug/Transorma.app`. A missing account, development identity, or provisioning profile is a setup failure; removing signing requirements does not make a working Mail installation.
+
+The Development app displays **Development preview** on Settings and Activity, labels its switch **Preview activation**, and never reports live protection as enabled. Turning that switch on only exercises temporary UI state. Both the app worker and extension processing remain absent in this configuration. `make run` also prints that no email will be processed.
 
 The regular app defaults to opening at login on its first launch with usable shared storage. `LoginItem` registers `SMAppService.mainApp` once and remembers that attempt in the app's private preferences. Subsequent launches respect an opt-out in Transorma or System Settings. If macOS requires approval, Settings provides an **Open Login Settings** button; a failed registration can be retried with the toggle. Development builds and UI tests have no login service, so `make run` never registers its temporary app as a startup item and explains the disabled control inline.
 

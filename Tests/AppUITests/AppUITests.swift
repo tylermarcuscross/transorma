@@ -12,19 +12,23 @@ final class TransormaUITests: XCTestCase {
         XCTAssertTrue(app.outlines.staticTexts["Settings"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["Email address or domain"].exists)
         XCTAssertFalse(app.staticTexts["Keep list"].exists)
+        XCTAssertTrue(app.staticTexts["Development preview"].exists)
+        XCTAssertTrue(
+            app.staticTexts["This build does not unsubscribe or move email. Use a signed build for Apple Mail."].exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "open-mail-settings").firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
+        XCTAssertTrue(app.staticTexts["Preview activation is off"].exists)
         let loginToggle = app.descendants(matching: .any).matching(identifier: "login-toggle").firstMatch
         XCTAssertTrue(loginToggle.exists)
         XCTAssertFalse(loginToggle.isEnabled)
         XCTAssertTrue(app.staticTexts["Login launch is disabled in this development build."].exists)
         let toggle = app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch
         XCTAssertTrue(toggle.exists)
-        XCTAssertTrue(app.staticTexts["Activate Transorma"].exists)
+        XCTAssertTrue(app.staticTexts["Preview activation"].exists)
         toggle.click()
-        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for Mail"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Protection enabled · waiting for Mail"].exists)
+        XCTAssertTrue(app.staticTexts["Preview activation is on"].waitForExistence(timeout: 3))
         toggle.click()
-        XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
+        XCTAssertTrue(app.staticTexts["Preview activation is off"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Settings"
         screenshot.lifetime = .keepAlways
@@ -38,6 +42,7 @@ final class TransormaUITests: XCTestCase {
         XCTAssertEqual(app.outlines.staticTexts.count, 2)
         app.outlines.staticTexts["Activity"].click()
         XCTAssertTrue(app.staticTexts["No activity yet"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Development preview"].exists)
         XCTAssertFalse(app.textFields["Email address or domain"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Activity"
@@ -48,7 +53,7 @@ final class TransormaUITests: XCTestCase {
     @MainActor
     func testMenuBarNavigationShortcutsAndQuit() throws {
         let app = launchApp()
-        XCTAssertTrue(app.staticTexts["Protection is paused"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Preview activation is off"].waitForExistence(timeout: 10))
         app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch.click()
         app.outlines.staticTexts["Activity"].click()
 
@@ -68,11 +73,11 @@ final class TransormaUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No activity yet"].exists)
         menuBarItem.click()
         menuBarItem.menuItems["Settings…"].click()
-        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for Mail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Preview activation is on"].waitForExistence(timeout: 3))
 
         app.outlines.staticTexts["Activity"].click()
         app.typeKey(",", modifierFlags: .command)
-        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for Mail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Preview activation is on"].waitForExistence(timeout: 3))
         app.outlines.staticTexts["Activity"].click()
         app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].click()
         app.typeKey("n", modifierFlags: .command)
@@ -83,7 +88,7 @@ final class TransormaUITests: XCTestCase {
         XCTAssertEqual(app.windows.count, 0)
         menuBarItem.click()
         menuBarItem.menuItems["Settings…"].click()
-        XCTAssertTrue(app.staticTexts["Protection enabled · waiting for Mail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Preview activation is on"].waitForExistence(timeout: 3))
         XCTAssertEqual(app.windows.count, 1)
         menuBarItem.click()
         menuBarItem.menuItems["Quit"].click()

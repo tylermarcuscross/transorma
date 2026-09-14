@@ -18,6 +18,18 @@
             }
         },
         {
+            "label": "Transorma: build signed app",
+            "type": "process",
+            "command": "/usr/bin/make",
+            "args": [
+                "build-signed"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$swiftc"
+        },
+        {
             "label": "Transorma: test all",
             "type": "process",
             "command": "/usr/bin/make",

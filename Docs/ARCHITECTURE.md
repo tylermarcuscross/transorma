@@ -84,6 +84,8 @@ The app signals catch-up when Mail launches or becomes active, when the Mac wake
 
 Production and preview composition are explicit `AppModel.live()` and `.preview()` factories. Development builds always use disposable storage with no worker; the extension also disables processing in that configuration. Preview state is injected into the actual views, and native UI tests exercise the actual application. A separate preview executable is unnecessary.
 
+Preview mode is explicit in the model and visible in both sections, including the activation label and status. Preview settings cannot indicate actual Mail protection. The shared scheme and `make run` retain this mode; `make build-signed` explicitly builds Debug with the account's provisioning assets for installation.
+
 `LoginItem` owns the app-only ServiceManagement boundary. The regular app applies its default registration once after shared storage is available; Development and previews omit this service. A private UserDefaults marker records the initial attempt, while macOS remains the source of truth for enabled/approval state. A later opt-out is never automatically reversed. Tests inject a fake service and isolated preferences, without changing the machine's login items.
 
 ## External services and model authority

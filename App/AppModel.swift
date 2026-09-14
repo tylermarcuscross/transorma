@@ -11,6 +11,7 @@ final class AppModel {
     private(set) var error: String?
     private(set) var storageReady = false
     let loginItem: LoginItem?
+    let isPreview: Bool
 
     var canManageLoginItem: Bool { loginItem != nil }
     var startsAtLogin: Bool { loginItem?.isEnabled ?? false }
@@ -25,6 +26,7 @@ final class AppModel {
     }
 
     var protectionStatus: String {
+        if isPreview { return snapshot.settings.enabled ? "Preview activation is on" : "Preview activation is off" }
         guard storageReady else { return "Protection is unavailable" }
         guard snapshot.settings.enabled else { return "Protection is paused" }
         switch pendingUnsubscribeCount {
@@ -36,12 +38,13 @@ final class AppModel {
 
     init(
         store: SharedStore?, worker: UnsubscribeWorker? = nil, loginItem: LoginItem? = nil,
-        temporaryDirectory: URL? = nil
+        temporaryDirectory: URL? = nil, isPreview: Bool = false
     ) {
         self.store = store
         self.worker = worker
         self.loginItem = loginItem
         self.temporaryDirectory = temporaryDirectory
+        self.isPreview = isPreview
         refresh()
     }
 
@@ -62,7 +65,7 @@ final class AppModel {
     static func preview() -> AppModel {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "TransormaPreview-" + UUID().uuidString, isDirectory: true)
-        return AppModel(store: try? SharedStore(directory: directory), temporaryDirectory: directory)
+        return AppModel(store: try? SharedStore(directory: directory), temporaryDirectory: directory, isPreview: true)
     }
 
     /// The application delegate owns and cancels this task, so work survives window closure.

@@ -28,6 +28,18 @@ struct ContentView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             VStack(spacing: 0) {
+                if model.isPreview {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Development preview", systemImage: "hammer")
+                            .font(.headline)
+                        Text("This build does not unsubscribe or move email. Use a signed build for Apple Mail.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 32).padding(.top, 24).frame(maxWidth: 820)
+                    .accessibilityIdentifier("preview-notice")
+                }
                 if let error = model.error {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .font(.callout).padding().frame(maxWidth: .infinity, alignment: .leading)
