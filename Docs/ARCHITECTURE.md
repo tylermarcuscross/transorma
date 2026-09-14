@@ -10,7 +10,7 @@ There is no application backend to build or deploy. `xcode-build-server` is a lo
 App/
   TransormaApp.swift          Entry point and application lifetime
   AppModel.swift             Observable state and user actions
-  Views/                    Navigation, four screens, and the menu bar
+  Views/                    Settings, Activity, and menu commands
   Resources/                Icon Composer artwork, assets, manifest, entitlements
 TransormaMailExtension/
   MailExtension.swift       MailKit entry point
@@ -61,9 +61,11 @@ flowchart TD
 
 `ProtectionEngine.prepare` returns a candidate without enqueuing or unsubscribing. Its DNS and model reads can suspend. Separating assessment from commitment lets the Mail callback deadline revoke the right to act when those reads take too long.
 
+Opening Mail can deliver a burst of messages that arrived while it was closed. These use the ordinary download callback; there is no inbox cursor, mailbox scan, or unread-message filter. The engine permits two active assessments and waits FIFO for up to 32 more, with at most 8 MB of queued message data and 2 MB per message. Waiting uses the same 20-second deadline as the Mail decision. Cancellation or expiry releases a waiting caller even if an active model request has not returned. Overflow and expired decisions preserve mail; MailKit does not offer a later replay API.
+
 `MessageDecisionGate` serializes timeout and commitment with a lock. Only the winning caller can resolve the callback. It rechecks cancellation and the deadline before saving a candidate; the store checks current consent during that transaction. A successful save precedes Trash. A timed-out assessment cannot later enqueue work, and a storage failure preserves the message. The callback runs outside the lock so it can safely reenter. Local disk I/O during commitment can still delay delivery; installed extension timing needs platform validation.
 
-The app and extension can both drain the queue. Claiming a job marks it as processing in shared storage. Before a request is written, the worker verifies that the same attempt still owns a live claim and that current settings permit it. The real transport repeats this authorization after DNS and TLS setup, immediately before writing request bytes. Completion also compares attempts, preventing a stale worker from completing a newer retry. Requests already transmitted cannot be recalled by changing a setting.
+The app and extension can both drain the queue. A worker drains ready jobs until idle, including jobs arriving during a pass; retry dates still apply. The app uses single-job passes to refresh progress between requests, without sleeping between ready jobs. Claiming a job marks it as processing in shared storage. Before a request is written, the worker verifies cancellation, that the same attempt still owns a live claim, and that current settings permit it. The real transport repeats this authorization after DNS and TLS setup, immediately before writing request bytes. Completion also compares attempts, preventing a stale worker from completing a newer retry. Requests already transmitted cannot be recalled by changing a setting.
 
 ## State and concurrency
 
@@ -71,7 +73,13 @@ The app and extension can both drain the queue. Claiming a job marks it as proce
 
 The refactor preserves the existing App Group identifier, state version, Codable field names, job kinds/status values, and duplicate fingerprints. Moving files does not reset user settings or pending jobs.
 
-The worker and assessment engine are actors. The UI model uses `@MainActor` and Observation's `@Observable`; views read it through SwiftUI's environment. The dashboard and menu bar share that one model. The application delegate owns the worker task and cancels it when the app terminates. Closing a window does not own or cancel unsubscribe processing. The menu can reopen the dashboard or pause protection. Store snapshots refresh while the live worker runs, when the app becomes active, and when its menu opens.
+The worker and assessment engine are actors. The UI model uses `@MainActor` and Observation's `@Observable`; views read it through SwiftUI's environment. The application delegate owns that model and starts its processing task in `applicationDidFinishLaunching`, independently of window presentation. It cancels the task and removes workspace observers on termination. Closing a window does not own or cancel processing.
+
+The single window has Settings and Activity sections. Settings contains protection, Mail setup, intelligence, and login options. The app scene owns the selected section and shares its binding with the window, status menu, and standard menu commands. Open Transorma restores the current section; Settings selects Settings and opens the same window. The status menu contains only Open Transorma, Settings…, and Quit; protection and progress stay in the window.
+
+There are currently no keep-list controls or per-sender actions in Activity. The core still honors previously saved sender exclusions for compatibility; removing their controls does not rewrite stored preferences. Activity cancellation, undo, and resubscription are not implemented.
+
+The app signals catch-up when Mail launches or becomes active, when the Mac wakes, and after settings changes. An `AsyncStream` coalesces signals to one buffered event, including events arriving during a drain. A cancellable 15-second poll discovers extension writes and due retries while also refreshing progress. These events only resume our saved queue; they do not launch Mail, fetch messages, or invoke MailKit themselves. The displayed remaining count refers to pending/processing unsubscribe requests, not an estimate of how many messages Mail has yet to download. Store snapshots also refresh when the app becomes active.
 
 Production and preview composition are explicit `AppModel.live()` and `.preview()` factories. Development builds always use disposable storage with no worker; the extension also disables processing in that configuration. Preview state is injected into the actual views, and native UI tests exercise the actual application. A separate preview executable is unnecessary.
 

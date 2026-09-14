@@ -1,35 +1,52 @@
 import SwiftUI
 
 struct MenuBarView: View {
-    @Environment(AppModel.self) private var model
+    @Binding var section: ContentView.Section
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
-            Text(status)
-            Divider()
             Button("Open Transorma") {
                 openWindow(id: TransormaApp.mainWindowID)
                 NSApplication.shared.activate()
             }
-            Toggle(
-                "Automatic Protection",
-                isOn: Binding(
-                    get: { model.snapshot.settings.enabled },
-                    set: { enabled in model.updateSettings { $0.enabled = enabled } })
-            )
-            .disabled(!model.storageReady)
+            .keyboardShortcut("n")
             Divider()
-            Button("Quit Transorma") {
+            Button("Settings…") {
+                section = .settings
+                openWindow(id: TransormaApp.mainWindowID)
+                NSApplication.shared.activate()
+            }
+            .keyboardShortcut(",")
+            Button("Quit") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q")
         }
-        .onAppear { model.refresh() }
+    }
+}
+
+/// Keep the same shortcuts available in the app's standard menus when the status menu is closed.
+struct MainWindowCommands: Commands {
+    @Binding var section: ContentView.Section
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("Open Transorma", action: openMainWindow)
+                .keyboardShortcut("n")
+        }
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                section = .settings
+                openMainWindow()
+            }
+            .keyboardShortcut(",")
+        }
     }
 
-    private var status: String {
-        guard model.storageReady else { return "Protection is unavailable" }
-        return model.snapshot.settings.enabled ? "Protection is enabled" : "Protection is paused"
+    private func openMainWindow() {
+        openWindow(id: TransormaApp.mainWindowID)
+        NSApplication.shared.activate()
     }
 }

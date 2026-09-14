@@ -17,6 +17,21 @@ final class AppModel {
     private let store: SharedStore?
     private let worker: UnsubscribeWorker?
     private let temporaryDirectory: URL?
+    private var catchUpSignal: AsyncStream<Void>.Continuation?
+
+    var pendingUnsubscribeCount: Int {
+        snapshot.jobs.count { $0.status == .pending || $0.status == .processing }
+    }
+
+    var protectionStatus: String {
+        guard storageReady else { return "Protection is unavailable" }
+        guard snapshot.settings.enabled else { return "Protection is paused" }
+        switch pendingUnsubscribeCount {
+        case 0: return "Protection enabled · waiting for Mail"
+        case 1: return "1 unsubscribe request remaining"
+        case let count: return "\(count) unsubscribe requests remaining"
+        }
+    }
 
     init(
         store: SharedStore?, worker: UnsubscribeWorker? = nil, canManageLoginItem: Bool = false,
@@ -51,18 +66,38 @@ final class AppModel {
 
     /// The application delegate owns and cancels this task, so work survives window closure.
     func run() async {
-        guard let worker else { return }
-        while !Task.isCancelled {
-            await worker.drain()
-            guard !Task.isCancelled else { return }
-            refresh()
-            do {
-                try await Task.sleep(for: .seconds(15))
-            } catch {
-                return
+        guard let worker, catchUpSignal == nil else { return }
+        let (events, signal) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        catchUpSignal = signal
+        defer {
+            signal.finish()
+            catchUpSignal = nil
+        }
+        signal.yield(())
+        await withTaskGroup(of: Void.self) { tasks in
+            // Poll shared storage for Mail's writes and due retries. Events also
+            // wake this loop immediately on Mail launch, Mac wake, or settings changes.
+            tasks.addTask {
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(15)) } catch { return }
+                    await self.refresh()
+                    signal.yield(())
+                }
             }
+            for await _ in events {
+                guard !Task.isCancelled else { break }
+                refresh()
+                while !Task.isCancelled {
+                    let processed = await worker.drain(limit: 1)
+                    refresh()
+                    if processed == 0 { break }
+                }
+            }
+            tasks.cancelAll()
         }
     }
+
+    func requestCatchUp() { catchUpSignal?.yield(()) }
 
     func refresh() {
         if canManageLoginItem { startsAtLogin = SMAppService.mainApp.status == .enabled }
@@ -93,28 +128,13 @@ final class AppModel {
             snapshot = try store.snapshot()
             storageReady = true
             error = nil
+            requestCatchUp()
             return true
         } catch {
             self.error = "Your change could not be saved. Please try again."
             storageReady = false
             return false
         }
-    }
-
-    @discardableResult
-    func keep(_ entry: String) -> Bool {
-        let entry = entry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard entry.count <= 254, entry.contains("."), !entry.contains(where: \.isWhitespace), !entry.contains("/"),
-            entry.range(of: #"^[a-z0-9._%+\-]+(?:@[a-z0-9.\-]+)?$"#, options: .regularExpression) != nil
-        else {
-            error = "Enter an email address or domain, such as news@example.com or example.com."
-            return false
-        }
-        return updateSettings { if !$0.allowedSenders.contains(entry) { $0.allowedSenders.append(entry) } }
-    }
-
-    func removeKeptSender(_ entry: String) {
-        updateSettings { $0.allowedSenders.removeAll { $0 == entry } }
     }
 
     func clearHistory() {

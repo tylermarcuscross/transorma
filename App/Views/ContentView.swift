@@ -2,23 +2,18 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
-    @State private var section: Section = .protection
-    @State private var keepEntry = ""
+    @Binding var section: Section
 
-    private enum Section: String, CaseIterable, Identifiable {
-        case protection = "Protection"
+    enum Section: String, CaseIterable, Identifiable {
+        case settings = "Settings"
         case activity = "Activity"
-        case keep = "Keep list"
-        case privacy = "Privacy"
 
         var id: Self { self }
 
         var symbol: String {
             switch self {
-            case .protection: "shield.lefthalf.filled"
+            case .settings: "gearshape"
             case .activity: "clock.arrow.circlepath"
-            case .keep: "heart"
-            case .privacy: "lock"
             }
         }
     }
@@ -30,28 +25,25 @@ struct ContentView: View {
                     .tag(item)
             }
             .navigationTitle("Transorma")
-            .safeAreaInset(edge: .bottom) {
-                Label("A quieter inbox.", systemImage: "envelope.badge.shield.half.filled")
-                    .font(.caption).foregroundStyle(.secondary).padding()
-            }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if let error = model.error {
-                        Label(error, systemImage: "exclamationmark.triangle")
-                            .font(.callout).padding().frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    switch section {
-                    case .protection: ProtectionView()
-                    case .activity: ActivityView()
-                    case .keep: KeepListView(keepEntry: $keepEntry)
-                    case .privacy: PrivacyView()
-                    }
+            VStack(spacing: 0) {
+                if let error = model.error {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .font(.callout).padding().frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 32).padding(.top, 32).frame(maxWidth: 820)
                 }
-                .padding(32).frame(maxWidth: 820, alignment: .leading).frame(maxWidth: .infinity)
+                switch section {
+                case .settings:
+                    ScrollView {
+                        SettingsView()
+                            .padding(32).frame(maxWidth: 820, alignment: .leading).frame(maxWidth: .infinity)
+                    }
+                case .activity: ActivityView()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(section.rawValue)
             .background(Color(nsColor: .windowBackgroundColor))
         }
@@ -62,5 +54,6 @@ struct ContentView: View {
 
 #Preview {
     @Previewable @State var model = AppModel.preview()
-    ContentView().environment(model)
+    @Previewable @State var section: ContentView.Section = .settings
+    ContentView(section: $section).environment(model)
 }

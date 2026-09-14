@@ -15,15 +15,20 @@ public actor UnsubscribeWorker {
         self.intelligence = intelligence
     }
 
-    /// Called on Mail activity and periodically by the companion app. Both use exclusive persisted claims.
-    public func drain(limit: Int = 3) async {
-        guard !running else { return }
+    /// Drain ready work, including arrivals during this pass. Delayed retries stay queued.
+    /// The app can use single-job passes to refresh progress between requests.
+    @discardableResult
+    public func drain(limit: Int = .max) async -> Int {
+        guard !running, limit > 0 else { return 0 }
         running = true
         defer { running = false }
+        var processed = 0
         for _ in 0..<limit {
-            guard !Task.isCancelled, let job = try? store.claim() else { return }
+            guard !Task.isCancelled, let job = try? store.claim() else { break }
             await process(job)
+            processed += 1
         }
+        return processed
     }
 
     private func authorized(_ job: UnsubscribeJob) throws -> ProtectionSettings {
@@ -34,6 +39,7 @@ public actor UnsubscribeWorker {
     private func send(_ request: HTTPRequest, for job: UnsubscribeJob) async throws -> HTTPResponse {
         let store = store
         return try await transport.send(request) {
+            try Task.checkCancellation()
             _ = try store.authorize(job)
         }
     }

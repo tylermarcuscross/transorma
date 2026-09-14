@@ -6,7 +6,70 @@ import TransormaCore
 
 @MainActor
 struct AppModelTests {
-    @Test func settingsArePersistedAndKeepEntriesAreNormalized() throws {
+    @Test func startupCatchesUpAcrossMoreThanOneOldWorkerBatch() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let writer = try SharedStore(directory: directory)
+        try writer.updateSettings { $0.enabled = true }
+        for index in 0..<12 { try enqueue(index, in: writer) }
+        let store = try SharedStore(directory: directory)
+        let transport = RecordingTransport()
+        let model = AppModel(store: store, worker: UnsubscribeWorker(store: store, transport: transport))
+
+        try await withThrowingTaskGroup(of: Void.self) { tasks in
+            tasks.addTask { await model.run() }
+            defer { tasks.cancelAll() }
+            try await waitUntil { model.snapshot.jobs.filter { $0.status == .accepted }.count == 12 }
+            #expect(await transport.requestCount == 12)
+            #expect(model.pendingUnsubscribeCount == 0)
+            #expect(model.protectionStatus == "Protection enabled · waiting for Mail")
+        }
+    }
+
+    @Test func aCatchUpSignalResumesWorkAddedByAnotherProcess() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try SharedStore(directory: directory)
+        try store.updateSettings { $0.enabled = true }
+        try enqueue(0, in: store)
+        let transport = RecordingTransport()
+        let model = AppModel(store: store, worker: UnsubscribeWorker(store: store, transport: transport))
+
+        try await withThrowingTaskGroup(of: Void.self) { tasks in
+            tasks.addTask { await model.run() }
+            defer { tasks.cancelAll() }
+            try await waitUntil { model.snapshot.jobs.first?.status == .accepted }
+            // Let the empty pass settle into its event wait. The regression must
+            // complete well before the 15-second fallback poll.
+            try await Task.sleep(for: .milliseconds(50))
+            try enqueue(1, in: SharedStore(directory: directory))
+            model.requestCatchUp()
+            model.requestCatchUp()
+            try await waitUntil { model.snapshot.jobs.filter { $0.status == .accepted }.count == 2 }
+            #expect(await transport.requestCount == 2)
+        }
+    }
+
+    @Test func catchUpStatusReflectsPendingWorkAndConsent() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try SharedStore(directory: directory)
+        try store.updateSettings { $0.enabled = true }
+        try enqueue(0, in: store)
+        try enqueue(1, in: store)
+        _ = try #require(try store.claim())
+        let model = AppModel(store: store)
+
+        #expect(model.pendingUnsubscribeCount == 2)
+        #expect(model.protectionStatus == "2 unsubscribe requests remaining")
+        #expect(model.updateSettings { $0.enabled = false })
+        #expect(model.protectionStatus == "Protection is paused")
+        try Data("invalid state".utf8).write(to: directory.appendingPathComponent("state.json"))
+        model.refresh()
+        #expect(model.protectionStatus == "Protection is unavailable")
+    }
+
+    @Test func settingsArePersisted() throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = try SharedStore(directory: directory)
@@ -17,31 +80,18 @@ struct AppModelTests {
         #expect(model.updateSettings { $0.enabled = true })
         #expect(try store.snapshot().settings.enabled)
 
-        #expect(model.keep("  News@Example.COM \n"))
-        #expect(model.keep("news@example.com"))
-        #expect(model.snapshot.settings.allowedSenders == ["news@example.com"])
-        #expect(try store.snapshot().settings.allowedSenders == ["news@example.com"])
-
-        model.removeKeptSender("news@example.com")
-        #expect(try store.snapshot().settings.allowedSenders.isEmpty)
+        #expect(model.updateSettings { $0.useIntelligence = false })
+        #expect(!model.snapshot.settings.useIntelligence)
+        #expect(!(try store.snapshot().settings.useIntelligence))
     }
 
-    @Test func successfulChangeClearsValidationError() throws {
-        let model = AppModel.preview()
-
-        #expect(!model.keep("invalid address"))
-        #expect(model.error != nil)
-        #expect(model.keep("example.com"))
-        #expect(model.error == nil)
-    }
-
-    @Test func unavailableStorageCannotReportASuccessfulKeep() {
+    @Test func unavailableStorageCannotReportASuccessfulChange() {
         let model = AppModel(store: nil)
 
         #expect(!model.storageReady)
-        #expect(!model.keep("example.com"))
+        #expect(!model.updateSettings { $0.enabled = true })
         #expect(model.error != nil)
-        #expect(model.snapshot.settings.allowedSenders.isEmpty)
+        #expect(!model.snapshot.settings.enabled)
 
         model.clearHistory()
         #expect(model.error != nil)
@@ -69,8 +119,8 @@ struct AppModelTests {
         let first = AppModel.preview()
         let second = AppModel.preview()
 
-        #expect(first.keep("example.com"))
-        #expect(second.snapshot.settings.allowedSenders.isEmpty)
+        #expect(first.updateSettings { $0.enabled = true })
+        #expect(!second.snapshot.settings.enabled)
         #expect(!first.canManageLoginItem)
         await first.run()
     }
@@ -89,5 +139,30 @@ struct AppModelTests {
 
     private func temporaryDirectory() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("TransormaModelTests-" + UUID().uuidString)
+    }
+
+    private func enqueue(_ index: Int, in store: SharedStore) throws {
+        try store.enqueue(
+            UnsubscribeJob(
+                sender: "offers@store.example.com", kind: .oneClick,
+                url: #require(URL(string: "https://store.example.com/u/\(index)"))))
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !condition() {
+            try #require(ContinuousClock.now < deadline, "Automatic catch-up did not make progress.")
+            try await Task.sleep(for: .milliseconds(1))
+        }
+    }
+}
+
+private actor RecordingTransport: HTTPTransport {
+    private(set) var requestCount = 0
+
+    func send(_ request: HTTPRequest, authorize: @escaping @Sendable () throws -> Void) async throws -> HTTPResponse {
+        try authorize()
+        requestCount += 1
+        return HTTPResponse(status: 200)
     }
 }

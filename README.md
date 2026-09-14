@@ -49,23 +49,24 @@ Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processi
 ## Implemented behavior
 
 - MailKit message actions, App Sandbox, and a shared App Group using public APIs.
-- Conservative English promotion rules, transactional and personal-mail exclusions, a keep list, and on-device classification when available.
+- Conservative English promotion rules, transactional and personal-mail exclusions, and on-device classification when available.
 - Complete-body DKIM verification, RSA-SHA256 and Ed25519-SHA256, signed decision headers, exact From-domain alignment, and published RFC interoperability tests.
 - RFC 8058 one-click HTTPS POST without cookies, credentials, or redirects.
 - An Apple Intelligence fallback for an explicit unsubscribe link in authenticated mail. It supports bounded same-host navigation and simple HTML forms. The model chooses from validated actions; application code constructs requests.
 - Optional macOS 27 Private Cloud Compute reasoning after local inference, guarded by both user opt-in and the actual signing entitlement. Default entitlements do not enable PCC.
 - A persistent bounded queue with exclusive cross-process claims, consent checks before network writes, explicit temporary-error backoff, seven-day expiry, and token removal after completion.
-- Activity history, pause, keep list, login launch, in-app privacy information, and a menu bar control for opening the app or pausing protection.
+- Automatic catch-up as Mail downloads messages that arrived while it was closed, with bounded assessment waiting for download bursts. Queued unsubscribes resume at Transorma launch, on Mac wake, and when Mail opens.
+- Two sections: Settings for protection, Mail setup, intelligence, and login launch; Activity for unsubscribe history and progress. The menu bar offers Open Transorma (⌘N), Settings… (⌘,), and Quit (⌘Q).
 
 ## Running against Mail
 
 After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Protect my inbox** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
 
-Mail must be running to process arriving messages. Keep Transorma running, optionally at login, to resume queued work after the extension exits. One-time setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
+Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. Keep Transorma running, optionally at login, to finish queued unsubscribes after the extension exits; its window can stay closed. One-time setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
 
 ## Coverage boundaries
 
-The extension processes new messages supplied by MailKit; it cannot enumerate an existing inbox or promise continuous background execution. An unsubscribe may complete after Trash is requested. If the callback deadline wins before queue commitment, assessment cannot later enqueue work.
+The extension processes messages supplied by MailKit; it cannot enumerate an existing inbox or replay previously downloaded messages that were skipped, timed out, or received while protection was paused. Catch-up depends on Mail downloading the messages, not their unread status. It does not run continuously while the Mac sleeps. An unsubscribe may complete after Trash is requested. If the callback deadline wins before queue commitment, assessment cannot later enqueue work. Bursts that exceed the bounded assessment capacity preserve the excess messages.
 
 Ambiguous, encrypted, malformed, oversized, unsigned, or unsupported messages are preserved. A list header alone does not establish marketing. The conservative rules leave many newsletters untouched; synthetic model checks do not establish production classification accuracy.
 

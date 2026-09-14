@@ -41,11 +41,14 @@ final class MessageActionHandler: NSObject, MEMessageActionHandler, @unchecked S
             completionHandler(.invokeAgainWithBody)
             return
         }
-        let completion = MessageDecisionGate(store: store) { shouldTrash in
+        // Catch-up messages use the same download callback as newly arriving mail.
+        // The deadline includes any wait behind other assessments in the burst.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(20))
+        let completion = MessageDecisionGate(store: store, deadline: deadline) { shouldTrash in
             completionHandler(shouldTrash ? .action(.moveToTrash) : nil)
         }
         let assessment = Task {
-            let candidate = await engine.prepare(raw: raw)
+            let candidate = await engine.prepare(raw: raw, deadline: deadline)
             if completion.resolve(candidate) { await worker.drain() }
         }
         // Complete exactly once, even when inference doesn't promptly observe cancellation.

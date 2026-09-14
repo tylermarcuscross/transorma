@@ -107,7 +107,9 @@ SwiftUI `#Preview` declarations render the same app views with isolated state in
 
 `App/Resources/AppIcon.icon` is the editable Icon Composer source. It contains a graphite background and two SVG layers forming a large white T with a silver paper fold. The monochrome palette takes its cues from black-and-white photographs of industrial mail sorting. Xcode compiles that same source into both the companion app and Mail extension, including the native Liquid Glass appearances and fallback icon resources. Open the `.icon` bundle in Xcode's **Open Developer Tool → Icon Composer** to adjust its layers.
 
-The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`, a separate monochrome SVG marked as a template image. macOS supplies its color for the current menu bar appearance. The menu is available while Transorma runs, including after its window closes; it shows protection state and provides Open, protection toggle, and Quit actions. Development builds still use isolated settings and no worker.
+The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`, a separate monochrome SVG marked as a template image. macOS supplies its color for the current menu bar appearance. The menu remains available after the window closes and offers **Open Transorma** (⌘N), **Settings…** (⌘,), and **Quit** (⌘Q). Open restores the selected section; Settings selects Settings in the same window. The shortcuts also appear in the app's standard menus and work while Transorma is active; they are not global hotkeys. Development builds still use isolated settings and no worker.
+
+In signed Debug and Release builds, the application delegate starts queue processing at launch without needing the dashboard to appear. Pending requests resume on Mac wake and Mail launch/activation, with a 15-second poll for shared queue changes and scheduled retries. Settings and Activity show remaining unsubscribe requests. Mail itself supplies new downloads, including messages that arrived while it was closed; these events cannot rescan an existing inbox. See the [catch-up validation steps](RELEASE.md#signed-installation) before testing against a real account.
 
 The app uses the adaptive grayscale `AccentColor` asset with native primary/secondary text and neutral surfaces. Sidebar selection follows the system's contrasting foreground, while status labels retain their text and symbols so meaning does not depend on color.
 
@@ -132,7 +134,7 @@ The [adapter documentation](https://github.com/SolaWing/xcode-build-server) expl
 | --- | --- |
 | `App/TransormaApp.swift` | App composition and application lifetime. |
 | `App/AppModel.swift` | Observable UI state and actions backed by shared storage. |
-| `App/Views` | Dashboard navigation, protection, activity, keep-list, privacy, and menu bar views. |
+| `App/Views` | Settings and Activity navigation, menu bar, and window commands. |
 | `TransormaMailExtension` | MailKit callbacks and extension packaging. |
 | `Sources/TransormaCore/Mail` | Byte-preserving message parsing and signature verification. |
 | `Sources/TransormaCore/Protection` | Settings, classification policy, and message assessment. |

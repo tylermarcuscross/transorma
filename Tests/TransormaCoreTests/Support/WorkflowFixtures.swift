@@ -58,25 +58,27 @@ struct TestStore: Sendable {
 actor AsyncGate {
     private var isOpen = false
     private var blocked: [CheckedContinuation<Void, Never>] = []
-    private var observers: [CheckedContinuation<Void, Never>] = []
+    private var observers: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
 
     func wait() async {
         guard !isOpen else { return }
         await withCheckedContinuation { continuation in
             blocked.append(continuation)
-            for observer in observers { observer.resume() }
-            observers.removeAll()
+            for observer in observers where blocked.count >= observer.count { observer.continuation.resume() }
+            observers.removeAll { blocked.count >= $0.count }
         }
     }
 
-    func waitUntilWaiting() async {
-        guard blocked.isEmpty, !isOpen else { return }
-        await withCheckedContinuation { observers.append($0) }
+    func waitUntilWaiting(count: Int = 1) async {
+        guard blocked.count < count, !isOpen else { return }
+        await withCheckedContinuation { observers.append((count, $0)) }
     }
 
     func open() {
         isOpen = true
         for continuation in blocked { continuation.resume() }
         blocked.removeAll()
+        for observer in observers { observer.continuation.resume() }
+        observers.removeAll()
     }
 }

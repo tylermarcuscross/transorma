@@ -2,7 +2,27 @@
 
 Environment: Apple silicon, macOS 27.0 RC (26A428), Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 RC (27A266a) at `/Applications/Xcode-27.app`, macOS 27 SDK. Project tooling selects this Xcode even when system-wide `xcode-select` points to Command Line Tools.
 
-## Refactored project
+## Keep-list removal
+
+- Removed the keep-list controls, draft state, app actions, and Activity's per-sender action. Obsolete keep-list UI and validation tests were removed; settings persistence and storage-failure coverage remain.
+- `make test`: **57 core tests, eight app model tests, and three UI tests** pass. The app and extension build successfully; strict formatting and whitespace checks pass. The editor index was refreshed after removing `KeepListView.swift`.
+- Existing sender exclusions in saved settings are still honored by the core. No storage migration, cancellation, undo, or resubscription feature was added.
+
+## Earlier Settings and Activity UI
+
+- `make test-ui`: all **four UI tests** pass with the two-section navigation and simplified status menu. They cover opt-in/pause, keep-list validation and draft persistence, Settings routing from Activity and a closed window, ⌘N/⌘, shortcuts, single-window reuse, and Quit. The two affected screen tests also pass after the final switch and empty-state alignment adjustments.
+- The native Development app and extension build successfully. Formatting and whitespace checks pass. SourceKit-LSP returns no diagnostics for all five app view files, the app entry point/model, manifest, and the existing core/extension/test checks. The refreshed editor index includes the renamed `SettingsView.swift` and seven compiled modules plus the manifest.
+- Settings, Activity, and the status menu were visually reviewed using UI test screenshots. Captures remain ignored under `.build/SettingsReview` and `.build/SettingsReviewFinal`. The dedicated Privacy view was removed; disclosure text beside the intelligence controls remains.
+
+## Automatic catch-up
+
+- `make test`: **57 core tests, nine app model tests, and four UI tests** pass on Xcode 27 RC. The Development build includes the companion app and embedded extension. UI tests verify the catch-up explanation and shared protection status, along with existing navigation and menu behavior.
+- `make test-core`: **57 Swift Testing tests, 119 cases after parameter expansion**, pass independently through SwiftPM, using synthetic messages, injected services, and temporary stores.
+- New regressions cover bursts beyond two active assessments, bounded waiting by count and bytes, queued cancellation/expiry, and protection paused while waiting. Worker tests drain persisted bursts and arrivals during a pass without repeating completed requests; they preserve retry dates and unknown outcomes. App model tests verify startup drains more than the former three-job batch, wake signals resume newly persisted work before the polling interval, progress reflects saved jobs, and cancellation ends the processing loop.
+- `make lint` passes, and `make archive-unsigned` produces the Release archive at `.build/Archives/Transorma.xcarchive`. Direct SourceKit-LSP checks return no diagnostics for the manifest and the same nine Swift files listed below; hover, definition lookup, and in-memory formatting still work.
+- Actual Mail close–receive–reopen behavior, workspace wake notifications, and processing after login without a dashboard still require the signed installation checks in [release preparation](RELEASE.md#signed-installation). No mailbox was accessed or modified. The Development configuration remains isolated and does not process real mail.
+
+## Earlier project validation
 
 - `make test-core`: **50 Swift Testing tests, 109 cases after parameter expansion**, pass independently through SwiftPM. Tests use injected DNS, HTTP, and intelligence with temporary stores; they do not contact unsubscribe sites or access a mailbox.
 - `make verify`: strict formatting, native Development build, **50 core tests and six app model tests**, and whitespace checks pass. The build includes the app, embedded extension, diagnostics, and test bundles. Actual compiler commands confirm warnings-as-errors for both native and Swift package targets.

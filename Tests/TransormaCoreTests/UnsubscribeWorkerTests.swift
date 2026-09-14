@@ -3,6 +3,105 @@ import Testing
 
 @testable import TransormaCore
 
+@Test func catchUpDrainsAPersistedBurstWithoutRepeatingCompletedRequests() async throws {
+    let storage = try TestStore()
+    defer { storage.remove() }
+    try storage.store.updateSettings { $0.enabled = true }
+    for index in 0..<12 {
+        try storage.store.enqueue(
+            UnsubscribeJob(
+                sender: "offers@store.example.com", kind: .oneClick,
+                url: #require(URL(string: "https://store.example.com/u/\(index)")),
+                now: .now.addingTimeInterval(-2 * 86_400)))
+    }
+    let resumed = try SharedStore(directory: storage.directory)
+    let transport = FakeTransport(Array(repeating: HTTPResponse(status: 200), count: 12))
+    let worker = UnsubscribeWorker(store: resumed, transport: transport, intelligence: FakeIntelligence())
+
+    #expect(await worker.drain() == 12)
+    #expect(try resumed.snapshot().jobs.allSatisfy { $0.status == .accepted && $0.url == nil })
+    #expect(await transport.requests.count == 12)
+    #expect(await UnsubscribeWorker(store: storage.store, transport: transport).drain() == 0)
+    #expect(await transport.requests.count == 12)
+}
+
+@Test func catchUpIncludesArrivalsWhileTheWorkerIsBusy() async throws {
+    let storage = try TestStore()
+    defer { storage.remove() }
+    try storage.store.updateSettings { $0.enabled = true }
+    try storage.store.enqueue(
+        UnsubscribeJob(
+            sender: "offers@store.example.com", kind: .oneClick,
+            url: #require(URL(string: "https://store.example.com/first"))))
+    let gate = AsyncGate()
+    let transport = FakeTransport(
+        Array(repeating: HTTPResponse(status: 200), count: 9), beforeSend: { await gate.wait() })
+    let worker = UnsubscribeWorker(store: storage.store, transport: transport, intelligence: FakeIntelligence())
+    let running = Task { await worker.drain() }
+    await gate.waitUntilWaiting()
+    for index in 0..<8 {
+        try storage.store.enqueue(
+            UnsubscribeJob(
+                sender: "offers@store.example.com", kind: .oneClick,
+                url: #require(URL(string: "https://store.example.com/later/\(index)"))))
+    }
+    #expect(await worker.drain() == 0)
+    await gate.open()
+
+    #expect(await running.value == 9)
+    #expect(await transport.requests.count == 9)
+    #expect(try storage.store.snapshot().jobs.allSatisfy { $0.status == .accepted })
+}
+
+@Test func catchUpPreservesRetryDelaysAndUnknownOutcomes() async throws {
+    let storage = try TestStore()
+    defer { storage.remove() }
+    try storage.store.updateSettings { $0.enabled = true }
+    let earlier = Date.now.addingTimeInterval(-200)
+    try storage.store.enqueue(
+        UnsubscribeJob(
+            sender: "offers@store.example.com", kind: .oneClick,
+            url: #require(URL(string: "https://store.example.com/interrupted")), now: earlier))
+    _ = try #require(try storage.store.claim(now: earlier))
+    var delayed = UnsubscribeJob(
+        sender: "offers@store.example.com", kind: .oneClick,
+        url: try #require(URL(string: "https://store.example.com/delayed")))
+    delayed.nextAttempt = .now.addingTimeInterval(120)
+    try storage.store.enqueue(delayed)
+    let readyURL = try #require(URL(string: "https://store.example.com/ready"))
+    try storage.store.enqueue(UnsubscribeJob(sender: "offers@store.example.com", kind: .oneClick, url: readyURL))
+    let transport = FakeTransport([HTTPResponse(status: 200)])
+
+    #expect(await UnsubscribeWorker(store: storage.store, transport: transport).drain() == 1)
+    #expect(await transport.requests.map(\.url) == [readyURL])
+    #expect(try storage.store.snapshot().jobs.map(\.status) == [.uncertain, .pending, .accepted])
+}
+
+@Test func cancelledCatchUpStopsBeforeWritingAndLeavesOtherJobsForRestart() async throws {
+    let storage = try TestStore()
+    defer { storage.remove() }
+    try storage.store.updateSettings { $0.enabled = true }
+    for index in 0..<2 {
+        try storage.store.enqueue(
+            UnsubscribeJob(
+                sender: "offers@store.example.com", kind: .oneClick,
+                url: #require(URL(string: "https://store.example.com/u/\(index)"))))
+    }
+    let gate = AsyncGate()
+    let transport = FakeTransport([HTTPResponse(status: 200)], beforeSend: { await gate.wait() })
+    let worker = UnsubscribeWorker(store: storage.store, transport: transport)
+    let running = Task { await worker.drain() }
+    await gate.waitUntilWaiting()
+    running.cancel()
+    await gate.open()
+
+    #expect(await running.value == 1)
+    #expect(await transport.requests.isEmpty)
+    #expect(try storage.store.snapshot().jobs.map(\.status) == [.uncertain, .pending])
+    #expect(await worker.drain() == 1)
+    #expect(await transport.requests.count == 1)
+}
+
 @Test(arguments: ["privateCloud", "intelligence", "protection", "keepSender", "expiredClaim"])
 func cloudFallbackRechecksConsentAndClaimAfterLocalInference(change: String) async throws {
     let storage = try TestStore()
@@ -34,7 +133,7 @@ func cloudFallbackRechecksConsentAndClaimAfterLocalInference(change: String) asy
     default: #expect(try store.claim(now: .now.addingTimeInterval(181)) == nil)
     }
     await gate.open()
-    await task.value
+    _ = await task.value
 
     #expect(await intelligence.cloudRequests == 0)
     #expect(await transport.requests.count == 1)
@@ -120,7 +219,7 @@ private actor CloudFallbackIntelligence: MailIntelligence {
     await gate.waitUntilWaiting()
     #expect(try otherProcess.claim(now: .now.addingTimeInterval(181)) == nil)
     await gate.open()
-    await task.value
+    _ = await task.value
 
     #expect(await transport.requests.count == 1)
     #expect(try store.snapshot().jobs.first?.status == .uncertain)
@@ -152,7 +251,7 @@ private actor CloudFallbackIntelligence: MailIntelligence {
     settings.useIntelligence = false
     try store.setSettings(settings)
     await gate.open()
-    await task.value
+    _ = await task.value
 
     #expect(await transport.requests.count == 1)
     #expect(try store.snapshot().jobs.first?.status == .cancelled)
@@ -177,7 +276,7 @@ private actor CloudFallbackIntelligence: MailIntelligence {
     settings.enabled = false
     try store.setSettings(settings)
     await gate.open()
-    await task.value
+    _ = await task.value
 
     #expect(await transport.requests.isEmpty)
     #expect(try store.snapshot().jobs.first?.status == .cancelled)
@@ -201,7 +300,7 @@ private actor CloudFallbackIntelligence: MailIntelligence {
     await gate.waitUntilWaiting()
     #expect(try store.claim(now: .now.addingTimeInterval(181)) == nil)
     await gate.open()
-    await task.value
+    _ = await task.value
 
     #expect(await transport.requests.isEmpty)
     #expect(try store.snapshot().jobs.first?.status == .uncertain)

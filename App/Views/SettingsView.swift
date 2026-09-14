@@ -1,35 +1,28 @@
 import SwiftUI
 import TransormaCore
 
-struct ProtectionView: View {
+struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            HStack(spacing: 18) {
-                Image(systemName: "envelope.badge.shield.half.filled")
-                    .font(.system(size: 38, weight: .light)).foregroundStyle(.primary)
-                    .frame(width: 80, height: 80).background(.quaternary, in: RoundedRectangle(cornerRadius: 22))
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Less marketing. More mail.").font(.largeTitle.bold())
-                    Text("Automatic unsubscribe for Apple Mail.").foregroundStyle(.secondary)
-                }
-            }
             GroupBox {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle(isOn: setting(\.enabled)) {
-                        Text("Protect my inbox").font(.headline)
-                        Text("Automatically unsubscribe and move matched marketing to Trash.").font(.callout)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Protect my inbox").font(.headline)
+                            Text("Automatically unsubscribe and move matched marketing to Trash.").font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }.toggleStyle(.switch).disabled(!model.storageReady).accessibilityIdentifier("protection-toggle")
                     Divider()
                     Text(
-                        "Turning this on authorizes Transorma to contact unsubscribe websites on your behalf, without asking for each message. It processes new mail as Apple Mail receives it. Uncertain messages stay in your inbox."
+                        "Transorma contacts unsubscribe websites automatically as Mail downloads messages, including mail that arrived while Mail was closed. Uncertain messages stay in your inbox."
                     )
                     .font(.callout).foregroundStyle(.secondary)
                     Label(
-                        model.snapshot.settings.enabled
-                            ? "Protection enabled · waiting for incoming mail" : "Protection is paused",
+                        model.protectionStatus,
                         systemImage: model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle"
                     )
                     .font(.callout.weight(.medium)).foregroundStyle(
@@ -40,7 +33,11 @@ struct ProtectionView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("1. Open Mail → Settings → Extensions.")
                     Text("2. Enable Transorma and allow access to message contents.")
-                    Text("3. Leave Apple Mail running to process incoming messages.")
+                    Text("3. Open Mail to check messages that arrived while it was closed.")
+                    Text(
+                        "Catch-up happens automatically as Mail downloads messages. Keep Transorma running in the menu bar to finish queued unsubscribes. Previously downloaded messages are not rescanned."
+                    )
+                    .foregroundStyle(.secondary)
                     if let last = model.snapshot.lastMailActivity {
                         Text("Last activity from Mail: \(last.formatted(date: .abbreviated, time: .shortened))").font(
                             .caption
