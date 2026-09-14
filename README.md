@@ -2,7 +2,7 @@
 
 Automatic unsubscribe and marketing cleanup for Apple Mail on macOS 27.
 
-Enable protection once. When Mail receives a supported marketing message, Transorma queues an unsubscribe and asks Mail to move the message to Trash. The companion app shows activity, manages senders to keep, and resumes queued work. There are no per-message approval dialogs.
+Enable protection once. When Mail receives a supported marketing message, Transorma queues an unsubscribe and asks Mail to move the message to Trash. The companion app shows activity and resumes queued work. There are no per-message approval dialogs.
 
 The app is under development. Local builds and automated tests work without paid developer enrollment; signed Mail integration and App Store validation remain release work. See the [validation record](Docs/VALIDATION.md) and [release preparation](Docs/RELEASE.md).
 
@@ -60,9 +60,9 @@ Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processi
 
 ## Running against Mail
 
-After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Protect my inbox** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
+After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Activate Transorma** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
 
-Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. Keep Transorma running, optionally at login, to finish queued unsubscribes after the extension exits; its window can stay closed. One-time setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
+Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. The regular app defaults to opening at login to finish queued unsubscribes after the extension exits; its window can stay closed. You can turn login launch off in Settings, and later launches respect that choice. Development builds leave login registration disabled. One-time protection setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
 
 ## Coverage boundaries
 

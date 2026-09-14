@@ -101,6 +101,8 @@ Open `Transorma.xcodeproj` and select the shared **Transorma** scheme. **⌘R** 
 
 To test real Mail integration, use Debug in the scheme and configure the team and App Group as described in [release preparation](RELEASE.md). Keep the checked-in shared scheme on Development for routine work.
 
+The regular app defaults to opening at login on its first launch with usable shared storage. `LoginItem` registers `SMAppService.mainApp` once and remembers that attempt in the app's private preferences. Subsequent launches respect an opt-out in Transorma or System Settings. If macOS requires approval, Settings provides an **Open Login Settings** button; a failed registration can be retried with the toggle. Development builds and UI tests have no login service, so `make run` never registers its temporary app as a startup item and explains the disabled control inline.
+
 SwiftUI `#Preview` declarations render the same app views with isolated state in Xcode. `make run` and F5 launch the actual app; UI tests attach a screenshot to their Xcode result bundle.
 
 ## Mail setup in Settings

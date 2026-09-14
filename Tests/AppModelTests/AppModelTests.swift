@@ -122,6 +122,9 @@ struct AppModelTests {
         #expect(first.updateSettings { $0.enabled = true })
         #expect(!second.snapshot.settings.enabled)
         #expect(!first.canManageLoginItem)
+        first.configureLoginAtFirstLaunch()
+        first.setLogin(true)
+        #expect(!first.startsAtLogin)
         await first.run()
     }
 

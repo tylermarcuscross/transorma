@@ -41,16 +41,39 @@ struct SettingsView: View {
                 }.padding(12)
             }
             .disabled(!model.storageReady)
+            loginSettings
+            Text(
+                "You can recover messages from Mail’s Trash until Mail deletes them. Unsubscribing cannot be undone here; to receive a list again, subscribe on its website."
+            )
+            .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var loginSettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Toggle(
                 "Open Transorma at login to resume queued unsubscribes",
                 isOn: Binding(get: { model.startsAtLogin }, set: { model.setLogin($0) })
             )
             .font(.callout)
             .disabled(!model.canManageLoginItem)
-            Text(
-                "You can recover messages from Mail’s Trash until Mail deletes them. Unsubscribing cannot be undone here; to receive a list again, subscribe on its website."
-            )
-            .font(.caption).foregroundStyle(.secondary)
+            .accessibilityIdentifier("login-toggle")
+
+            if let loginItem = model.loginItem {
+                if loginItem.requiresApproval {
+                    Text("Allow Transorma in Login Items to open it automatically.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if let error = loginItem.error {
+                    Text(error).font(.caption).foregroundStyle(.secondary)
+                }
+                if loginItem.requiresApproval || loginItem.error != nil {
+                    Button("Open Login Settings") { loginItem.openSettings() }
+                        .font(.callout)
+                }
+            } else {
+                Text("Login launch is disabled in this development build.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 

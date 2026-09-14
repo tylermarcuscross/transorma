@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import ServiceManagement
 import TransormaCore
 
 /// Main-actor state for the companion app. The shared store remains the source of truth
@@ -11,8 +10,10 @@ final class AppModel {
     private(set) var snapshot = StoreSnapshot()
     private(set) var error: String?
     private(set) var storageReady = false
-    private(set) var startsAtLogin = false
-    let canManageLoginItem: Bool
+    let loginItem: LoginItem?
+
+    var canManageLoginItem: Bool { loginItem != nil }
+    var startsAtLogin: Bool { loginItem?.isEnabled ?? false }
 
     private let store: SharedStore?
     private let worker: UnsubscribeWorker?
@@ -34,12 +35,12 @@ final class AppModel {
     }
 
     init(
-        store: SharedStore?, worker: UnsubscribeWorker? = nil, canManageLoginItem: Bool = false,
+        store: SharedStore?, worker: UnsubscribeWorker? = nil, loginItem: LoginItem? = nil,
         temporaryDirectory: URL? = nil
     ) {
         self.store = store
         self.worker = worker
-        self.canManageLoginItem = canManageLoginItem
+        self.loginItem = loginItem
         self.temporaryDirectory = temporaryDirectory
         refresh()
     }
@@ -51,9 +52,9 @@ final class AppModel {
     static func live() -> AppModel {
         do {
             let store = try SharedStore.appGroup()
-            return AppModel(store: store, worker: UnsubscribeWorker(store: store), canManageLoginItem: true)
+            return AppModel(store: store, worker: UnsubscribeWorker(store: store), loginItem: LoginItem())
         } catch {
-            return AppModel(store: nil, canManageLoginItem: true)
+            return AppModel(store: nil, loginItem: LoginItem())
         }
     }
 
@@ -99,8 +100,13 @@ final class AppModel {
 
     func requestCatchUp() { catchUpSignal?.yield(()) }
 
+    func configureLoginAtFirstLaunch() {
+        guard storageReady else { return }
+        loginItem?.applyDefaultOnce()
+    }
+
     func refresh() {
-        if canManageLoginItem { startsAtLogin = SMAppService.mainApp.status == .enabled }
+        loginItem?.refresh()
         guard let store else {
             error = "Shared protection storage is unavailable. Use a signed build with the Transorma App Group enabled."
             storageReady = false
@@ -152,15 +158,6 @@ final class AppModel {
     }
 
     func setLogin(_ enabled: Bool) {
-        guard canManageLoginItem else { return }
-        do {
-            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            startsAtLogin = SMAppService.mainApp.status == .enabled
-            error = nil
-            if SMAppService.mainApp.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-        } catch {
-            self.error =
-                "Login access could not be updated. Check System Settings → General → Login Items & Extensions."
-        }
+        loginItem?.setEnabled(enabled)
     }
 }

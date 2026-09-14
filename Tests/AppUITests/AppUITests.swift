@@ -14,6 +14,10 @@ final class TransormaUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Keep list"].exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "open-mail-settings").firstMatch.exists)
         XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
+        let loginToggle = app.descendants(matching: .any).matching(identifier: "login-toggle").firstMatch
+        XCTAssertTrue(loginToggle.exists)
+        XCTAssertFalse(loginToggle.isEnabled)
+        XCTAssertTrue(app.staticTexts["Login launch is disabled in this development build."].exists)
         let toggle = app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch
         XCTAssertTrue(toggle.exists)
         XCTAssertTrue(app.staticTexts["Activate Transorma"].exists)

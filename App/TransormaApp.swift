@@ -50,6 +50,7 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        model.configureLoginAtFirstLaunch()
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(
             self, selector: #selector(resumeQueuedWork), name: NSWorkspace.didWakeNotification, object: nil)

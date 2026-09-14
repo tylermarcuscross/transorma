@@ -2,6 +2,14 @@
 
 Environment: Apple silicon, macOS 27.0 RC (26A428), Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 RC (27A266a) at `/Applications/Xcode-27.app`, macOS 27 SDK. Project tooling selects this Xcode even when system-wide `xcode-select` points to Command Line Tools.
 
+## Default login launch
+
+- The regular app attempts login registration once on its first launch with usable shared storage. Later launches respect app and System Settings opt-outs. Settings reflects macOS's registration state, offers an approval action when needed, and retains registration errors independently of mail refreshes.
+- Development builds and UI tests omit the login service. The disabled control now explains why login launch is unavailable in this build.
+- `make test-unit`: **57 core tests and 15 app model/login tests** pass. New tests use a fake service and isolated preferences to cover one-time registration, opt-out persistence, System Settings revocation/approval, registration failures and retries, and startup storage/protection boundaries. No real login registration was changed.
+- All **three UI tests** pass, including the disabled login control and its explanation. Strict formatting, privacy manifest syntax, and whitespace checks pass. The built app includes the UserDefaults `CA92.1` declaration for its private setup marker; the editor index was refreshed.
+- Actual registration and launch after logout/login remain signed installation checks in [release preparation](RELEASE.md#signed-installation).
+
 ## App and menu bar accents
 
 - The menu bar T now has a small red paper fold. The 18-point vector asset supplies black/light and white/dark variants, using original rendering to preserve the accent.
