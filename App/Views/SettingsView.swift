@@ -7,46 +7,16 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             GroupBox {
-                VStack(alignment: .leading, spacing: 14) {
-                    Toggle(isOn: setting(\.enabled)) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Protect my inbox").font(.headline)
-                            Text("Automatically unsubscribe and move matched marketing to Trash.").font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }.toggleStyle(.switch).disabled(!model.storageReady).accessibilityIdentifier("protection-toggle")
-                    Divider()
-                    Text(
-                        "Transorma contacts unsubscribe websites automatically as Mail downloads messages, including mail that arrived while Mail was closed. Uncertain messages stay in your inbox."
-                    )
-                    .font(.callout).foregroundStyle(.secondary)
-                    Label(
-                        model.protectionStatus,
-                        systemImage: model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle"
-                    )
-                    .font(.callout.weight(.medium)).foregroundStyle(
-                        model.snapshot.settings.enabled ? .primary : .secondary)
-                }.padding(12)
+                Toggle(isOn: setting(\.enabled)) {
+                    Text("Activate Transorma")
+                        .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .toggleStyle(.switch)
+                .disabled(!model.storageReady)
+                .accessibilityIdentifier("protection-toggle")
+                .padding(12)
             }
-            GroupBox("Connect to Apple Mail") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("1. Open Mail → Settings → Extensions.")
-                    Text("2. Enable Transorma and allow access to message contents.")
-                    Text("3. Open Mail to check messages that arrived while it was closed.")
-                    Text(
-                        "Catch-up happens automatically as Mail downloads messages. Keep Transorma running in the menu bar to finish queued unsubscribes. Previously downloaded messages are not rescanned."
-                    )
-                    .foregroundStyle(.secondary)
-                    if let last = model.snapshot.lastMailActivity {
-                        Text("Last activity from Mail: \(last.formatted(date: .abbreviated, time: .shortened))").font(
-                            .caption
-                        ).foregroundStyle(.secondary)
-                    } else {
-                        Text("No activity from the extension yet.").font(.caption).foregroundStyle(.secondary)
-                    }
-                }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(12)
-            }
+            mailSetup
             GroupBox("Apple Intelligence") {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle(
@@ -82,6 +52,83 @@ struct SettingsView: View {
             )
             .font(.caption).foregroundStyle(.secondary)
         }
+    }
+
+    private var mailSetup: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    Image(systemName: "envelope.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 44, height: 44)
+                        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Connect to Apple Mail").font(.headline)
+                        Text("Mail → Settings → Extensions")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 12)
+                    Link(destination: URL(string: "mail-pref-pane://extensionspref")!) {
+                        Text("Open Mail Settings")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .accessibilityIdentifier("open-mail-settings")
+                    .help("Open Extensions settings in Apple Mail")
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    setupStep("1", title: "Enable Transorma", detail: "Select the checkbox next to Transorma.")
+                    setupStep(
+                        "2", title: "Allow message access",
+                        detail: "Allow access to message contents when Mail asks.")
+                }
+
+                Text("Transorma automatically contacts unsubscribe websites and moves matched marketing to Trash.")
+                    .font(.callout).foregroundStyle(.secondary)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(
+                        model.protectionStatus,
+                        systemImage: model.snapshot.settings.enabled ? "checkmark.shield" : "pause.circle"
+                    )
+                    .font(.callout.weight(.medium)).foregroundStyle(.secondary)
+                    if let last = model.snapshot.lastMailActivity {
+                        Text("Last activity from Mail: \(last.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    DisclosureGroup("How background processing works") {
+                        Text(
+                            "Catch-up happens as Mail downloads messages, including mail that arrived while it was closed. Keep Transorma running in the menu bar to finish queued unsubscribes. Previously downloaded messages are not rescanned, and uncertain messages stay in your inbox."
+                        )
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
+                    }
+                    .font(.callout)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+        }
+    }
+
+    private func setupStep(_ number: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(number)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 28, height: 28)
+                .background(Color.accentColor.opacity(0.12), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.callout.weight(.semibold))
+                Text(detail).font(.callout).foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func setting(_ keyPath: WritableKeyPath<ProtectionSettings, Bool>) -> Binding<Bool> {

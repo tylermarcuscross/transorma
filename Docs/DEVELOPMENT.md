@@ -103,15 +103,25 @@ To test real Mail integration, use Debug in the scheme and configure the team an
 
 SwiftUI `#Preview` declarations render the same app views with isolated state in Xcode. `make run` and F5 launch the actual app; UI tests attach a screenshot to their Xcode result bundle.
 
+## Mail setup in Settings
+
+The first card contains only the **Activate Transorma** switch. The Mail setup card has two steps and an **Open Mail Settings** link styled as the primary action. It opens `mail-pref-pane://extensionspref`, a URL handled by the installed Mail app on macOS 27 RC. This is a normal SwiftUI `Link`; it does not use AppleScript, Accessibility automation, or change Mail permissions. Mail's own checkbox and consent prompt still control extension access.
+
+Apple does not document this pane URL as a MailKit API. Verify that it opens Extensions after macOS updates; the visible **Mail → Settings → Extensions** path remains the manual route. Background behavior and its limitations are available in an expandable explanation below the setup steps.
+
 ## App and menu bar artwork
 
 `App/Resources/AppIcon.icon` is the editable Icon Composer source. It contains a graphite background and two SVG layers forming a large white T with a silver paper fold. The monochrome palette takes its cues from black-and-white photographs of industrial mail sorting. Xcode compiles that same source into both the companion app and Mail extension, including the native Liquid Glass appearances and fallback icon resources. Open the `.icon` bundle in Xcode's **Open Developer Tool → Icon Composer** to adjust its layers.
 
-The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`, a separate monochrome SVG marked as a template image. macOS supplies its color for the current menu bar appearance. The menu remains available after the window closes and offers **Open Transorma** (⌘N), **Settings…** (⌘,), and **Quit** (⌘Q). Open restores the selected section; Settings selects Settings in the same window. The shortcuts also appear in the app's standard menus and work while Transorma is active; they are not global hotkeys. Development builds still use isolated settings and no worker.
+The menu bar uses `App/Resources/Assets.xcassets/MenuBarIcon.imageset`: a black or white T with a small vermilion paper fold. The asset catalog supplies light and dark SVG variants; original rendering preserves the red detail. The menu remains available after the window closes and offers **Open Transorma** (⌘N), **Settings…** (⌘,), and **Quit** (⌘Q). Open restores the selected section; Settings selects Settings in the same window. The shortcuts also appear in the app's standard menus and work while Transorma is active; they are not global hotkeys. Development builds still use isolated settings and no worker.
+
+Mail's **Settings → Extensions** uses named images from the extension bundle rather than its app-icon metadata. `TransormaMailExtension/Resources/Assets.xcassets` supplies `icon-menu` for the extension list and `icon-preferences` for the details panel. These use the menu bar's T geometry at 18 and 64 points, with vector preservation and monochrome template rendering so Mail supplies the appearance and selection colors. Keep the T geometry aligned across the menu bar variants and Mail assets when updating the mark. These resource names were verified on macOS 27 RC; recheck the panel when upgrading macOS. Mail caches the images, so quit and reopen Mail after rebuilding if it still shows the puzzle-piece fallback. No extra extension capabilities or runtime API calls are needed.
+
+Mail also generates the details heading as **extension name + version + “from” + containing app name**. The “from Transorma” text identifies the companion app. MailKit exposes no supported heading override to substitute an author or hide the version. Keep the app's display name and valid app/extension version metadata intact; this heading is controlled by Mail.
 
 In signed Debug and Release builds, the application delegate starts queue processing at launch without needing the dashboard to appear. Pending requests resume on Mac wake and Mail launch/activation, with a 15-second poll for shared queue changes and scheduled retries. Settings and Activity show remaining unsubscribe requests. Mail itself supplies new downloads, including messages that arrived while it was closed; these events cannot rescan an existing inbox. See the [catch-up validation steps](RELEASE.md#signed-installation) before testing against a real account.
 
-The app uses the adaptive grayscale `AccentColor` asset with native primary/secondary text and neutral surfaces. Sidebar selection follows the system's contrasting foreground, while status labels retain their text and symbols so meaning does not depend on color.
+The app uses a vivid vermilion `AccentColor`: `#DF3026` in light appearance and a brighter `#FF4B3E` in dark appearance. Native sidebar icons, selection, and active controls pick up this accent against neutral surfaces. Sidebar selection follows the system's contrasting foreground, while status labels retain their text and symbols so meaning does not depend on color. The menu bar's paper fold uses the same reds; the app icon and Mail settings artwork remain monochrome.
 
 Rendered previews and compiled icon binaries belong under `.build/`; the small vector sources and Icon Composer document belong in Git. [Apple's Icon Composer guide](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer) describes the native layered format.
 

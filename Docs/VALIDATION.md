@@ -2,6 +2,23 @@
 
 Environment: Apple silicon, macOS 27.0 RC (26A428), Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 RC (27A266a) at `/Applications/Xcode-27.app`, macOS 27 SDK. Project tooling selects this Xcode even when system-wide `xcode-select` points to Command Line Tools.
 
+## Menu bar accent
+
+- The menu bar T now has a small red paper fold. The 18-point vector asset supplies black/light and white/dark variants, using original rendering to preserve the accent.
+- `make build`, `make lint`, and whitespace checks pass. Both compiled asset appearances and the actual menu bar icon were visually reviewed. Temporary previews remain ignored under `.build/MenuBarAccentReview`.
+
+## Simplified activation and Mail setup
+
+- The first Settings card contains only **Activate Transorma** and its switch. The Mail card now has a primary action, two numbered setup steps, and an expandable background explanation.
+- Verified `mail-pref-pane://extensionspref` switches Mail from General to Extensions settings. Clicking **Open Mail Settings** in the sandboxed Development app also launches Mail directly into Extensions when Mail is closed. This check did not enable the extension or change its permissions.
+- The three existing UI checks pass; activation was rerun after the final card-width adjustment. Strict formatting and whitespace checks pass. The normal and minimum-width layouts were visually reviewed, with temporary helpers and screenshots ignored under `.build/MailSetupReview`.
+
+## Mail settings artwork
+
+- Added `icon-menu` and `icon-preferences` template image assets to the extension. Mail's list and details panel both display the Transorma T after a normal Mail quit and relaunch; this was verified in the actual Extensions settings window on macOS 27 RC.
+- `make build` and `make archive-unsigned` pass. Bundle image lookups confirm both named assets load from Development and archived Release extensions, with template rendering and the intended 18/64-point sizes. Asset JSON, SVG, and whitespace checks pass.
+- Screenshots and temporary diagnostics remain ignored under `.build/MailIconReview`. Verification selected the extension's settings row without enabling it or changing its permissions. Mail processing and signed integration remain separate checks.
+
 ## Keep-list removal
 
 - Removed the keep-list controls, draft state, app actions, and Activity's per-sender action. Obsolete keep-list UI and validation tests were removed; settings persistence and storage-failure coverage remain.

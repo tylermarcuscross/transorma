@@ -12,10 +12,11 @@ final class TransormaUITests: XCTestCase {
         XCTAssertTrue(app.outlines.staticTexts["Settings"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["Email address or domain"].exists)
         XCTAssertFalse(app.staticTexts["Keep list"].exists)
-        XCTAssertTrue(app.staticTexts["3. Open Mail to check messages that arrived while it was closed."].exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "open-mail-settings").firstMatch.exists)
         XCTAssertTrue(app.staticTexts["Protection is paused"].exists)
         let toggle = app.descendants(matching: .any).matching(identifier: "protection-toggle").firstMatch
         XCTAssertTrue(toggle.exists)
+        XCTAssertTrue(app.staticTexts["Activate Transorma"].exists)
         toggle.click()
         XCTAssertTrue(app.staticTexts["Protection enabled · waiting for Mail"].waitForExistence(timeout: 3))
         toggle.click()

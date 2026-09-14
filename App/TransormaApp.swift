@@ -24,7 +24,7 @@ struct TransormaApp: App {
             MenuBarView(section: $section)
         } label: {
             Image("MenuBarIcon")
-                .renderingMode(.template)
+                .renderingMode(.original)
                 .accessibilityLabel("Transorma")
                 .accessibilityIdentifier("transorma-menu-bar")
         }
