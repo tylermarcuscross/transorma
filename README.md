@@ -49,7 +49,7 @@ Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processi
 ## Implemented behavior
 
 - MailKit message actions, App Sandbox, and a shared App Group using public APIs.
-- Conservative English promotion rules, transactional and personal-mail exclusions, and on-device classification when available.
+- Transactional and personal-mail exclusions, on-device marketing classification, and a conservative English keyword fallback when intelligence is off or unavailable.
 - Complete-body DKIM verification, RSA-SHA256 and Ed25519-SHA256, signed decision headers, exact From-domain alignment, and published RFC interoperability tests.
 - RFC 8058 one-click HTTPS POST without cookies, credentials, or redirects.
 - An Apple Intelligence fallback for an explicit unsubscribe link in authenticated mail. It supports bounded same-host navigation and simple HTML forms. The model chooses from validated actions; application code constructs requests.

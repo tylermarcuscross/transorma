@@ -49,13 +49,18 @@ public actor ProtectionEngine {
             let headerLinks = message.single("list-unsubscribe").map(MailDocument.headerURLs) ?? []
             let bodyLinks = UnsubscribePage.emailLinks(in: content.html)
             let candidates = Array(Set((headerLinks + bodyLinks).filter { (try? URLPolicy.validate($0)) != nil }))
-            guard MarketingPolicy.isCandidate(subject: subject, text: text, hasUnsubscribe: !candidates.isEmpty) else {
+            let usingIntelligence = settings.useIntelligence && intelligence.available
+            guard
+                MarketingPolicy.isCandidate(
+                    subject: subject, text: text, hasUnsubscribe: !candidates.isEmpty,
+                    usingIntelligence: usingIntelligence)
+            else {
                 return nil
             }
             let verified = try await verifier.verify(message)
             try Task.checkCancellation()
             guard ContinuousClock.now < deadline else { return nil }
-            if settings.useIntelligence && intelligence.available {
+            if usingIntelligence {
                 guard try await intelligence.isMarketing(subject: subject, text: text) else { return nil }
             }
             try Task.checkCancellation()

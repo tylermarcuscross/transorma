@@ -7,10 +7,12 @@ struct FakeIntelligence: MailIntelligence {
     var marketing = true
     var choice: Int? = 0
     var beforeClassification: @Sendable () async -> Void = {}
+    var classificationError: MailError?
     var beforeChoice: @Sendable () async -> Void = {}
 
     func isMarketing(subject: String, text: String) async throws -> Bool {
         await beforeClassification()
+        if let classificationError { throw classificationError }
         return marketing
     }
 
