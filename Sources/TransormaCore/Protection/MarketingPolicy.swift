@@ -4,7 +4,14 @@ public enum MarketingPolicy {
     public static func isCandidate(
         subject: String, text: String, hasUnsubscribe: Bool, usingIntelligence: Bool = false
     ) -> Bool {
-        guard hasUnsubscribe else { return false }
+        rejectionReason(
+            subject: subject, text: text, hasUnsubscribe: hasUnsubscribe, usingIntelligence: usingIntelligence) == nil
+    }
+
+    static func rejectionReason(
+        subject: String, text: String, hasUnsubscribe: Bool, usingIntelligence: Bool
+    ) -> ProcessingEvent? {
+        guard hasUnsubscribe else { return .noUnsubscribe }
         let subject = subject.lowercased()
         let text = text.lowercased()
         let protected = [
@@ -18,16 +25,16 @@ public enum MarketingPolicy {
         ]
         guard !subject.hasPrefix("re:"), !subject.hasPrefix("fwd:"), !subject.hasPrefix("fw:"),
             !protected.contains(where: { subject.contains($0) || text.contains($0) })
-        else { return false }
+        else { return .protectedContent }
         let policyTopics = ["privacy policy", "terms of service"]
         guard !policyTopics.contains(where: { subject.contains($0) || (!usingIntelligence && text.contains($0)) })
-        else { return false }
-        if usingIntelligence { return true }
+        else { return .protectedContent }
+        if usingIntelligence { return nil }
         let promotion = [
             "sale", "discount", "% off", "shop now", "special offer", "limited time", "save today", "coupon",
             "promo code", "new arrivals", "clearance",
         ]
         let signals = promotion.filter { subject.contains($0) || text.contains($0) }
-        return signals.count >= 2
+        return signals.count >= 2 ? nil : .insufficientPromotionSignals
     }
 }

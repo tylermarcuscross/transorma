@@ -22,7 +22,7 @@ struct AppModelTests {
             try await waitUntil { model.snapshot.jobs.filter { $0.status == .accepted }.count == 12 }
             #expect(await transport.requestCount == 12)
             #expect(model.pendingUnsubscribeCount == 0)
-            #expect(model.protectionStatus == "Protection enabled · waiting for Mail")
+            #expect(model.protectionStatus == "Activated · no Mail callbacks recorded")
         }
     }
 

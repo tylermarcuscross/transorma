@@ -6,6 +6,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AF0000000000000000000001 = {isa = PBXBuildFile; fileRef = AF0000000000000000000003; };
+		AF0000000000000000000002 = {isa = PBXBuildFile; fileRef = AF0000000000000000000004; };
 		AE0000000000000000000001 = {
 			isa = PBXBuildFile;
 			fileRef = AE0000000000000000000002;
@@ -65,6 +67,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AF0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransormaMailExtension/MailExtension.swift; sourceTree = SOURCE_ROOT; };
+		AF0000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransormaMailExtension/MessageActionHandler.swift; sourceTree = SOURCE_ROOT; };
 		AE0000000000000000000002 = {
 			isa = PBXFileReference;
 			lastKnownFileType = folder.icon;
@@ -379,7 +383,7 @@
 		AC0000000000000000000023 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (AF0000000000000000000001, AF0000000000000000000002, );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

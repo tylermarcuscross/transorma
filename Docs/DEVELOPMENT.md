@@ -7,20 +7,20 @@ There is no application server to build or run. The **build server** translates 
 ## Setup
 
 1. Install Xcode 27 or newer and finish its first launch.
-2. Open the repository folder in VS Code and install its recommended [Swift extension](https://github.com/swiftlang/vscode-swift).
-3. Install the one editor adapter: `brew install xcode-build-server`.
-4. Run `make doctor`, then press **⇧⌘B** to build.
-5. Run **Developer: Reload Window** after changing the toolchain or opening this refactored workspace with old diagnostics.
+2. Select it in **Xcode → Settings → Locations → Command Line Tools**, or run `sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer` once. This requires administrator authentication.
+3. Open the repository folder in VS Code and install its recommended [Swift extension](https://github.com/swiftlang/vscode-swift).
+4. Install the one editor adapter: `brew install xcode-build-server`.
+5. Run `make doctor`, then press **⇧⌘B** to build.
 
-The checked-in editor settings select `/Applications/Xcode-27.app`. If your installation has a different name, change `swift.path` and the two `DEVELOPER_DIR` settings in `.vscode/settings.json`. These settings configure different processes; VS Code does not generally expand launch/task variables inside arbitrary extension settings.
+The editor and command-line builds follow the system's `xcode-select` selection. Workspace settings deliberately do not pin a Swift binary, SDK, or terminal `DEVELOPER_DIR`: separate paths can accidentally combine a new compiler with a removed SDK. No separate Swift installation or formatter package is required. `make doctor` prints the selected developer directory, compiler, SDK, and editor adapter. An incompatible selection fails with instructions to fix it instead of silently building with a different Xcode.
 
-Terminal commands honor an explicit `DEVELOPER_DIR`, then look for Xcode 27+ using `xcode-select`, `/Applications/Xcode-27.app`, and `/Applications/Xcode.app`. For example:
+For an intentional one-off build with another Xcode, commands still honor an explicit `DEVELOPER_DIR`. This does not change the editor's selection:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make doctor
 ```
 
-Selecting Xcode in **Xcode → Settings → Locations → Command Line Tools** also configures ordinary terminals. No separate Swift installation, formatter package, or model download script is required.
+After replacing or switching Xcode, run `make doctor` and `make reindex`, then **Developer: Reload Window** in VS Code. Restarting only SourceKit-LSP does not refresh all of the Swift extension's cached SDK and XCTest paths. Open a new integrated terminal too if its environment was configured before the switch. If the editor still disagrees, inspect user/profile settings for `swift.path`, `swift.SDK`, and `swift.swiftEnvironmentVariables`, and remove stale overrides. The **Swift** output channel records the compiler, SDK, and XCTest paths at startup.
 
 ## VS Code profiles
 
@@ -71,6 +71,10 @@ Third-party attribution lives in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md
 | Refresh editor compiler settings | **Transorma: refresh index** | `make index` |
 | Clean build and refresh editor settings | **Transorma: rebuild index** | `make reindex` |
 | Check the toolchain | **Transorma: doctor** | `make doctor` |
+| Stream app and extension events | **Transorma: stream logs** | `make logs` |
+| Read the last hour of logs | **Transorma: recent logs** | `make logs-show` |
+| Read installed activation, callback status, and recent decisions | **Transorma: diagnose installed app** | `make diagnose` |
+| Assess a saved email without sending an unsubscribe | **Transorma: assess saved email (read-only)** | See below |
 | Validate Release packaging without signing | | `make archive-unsigned` |
 | Remove generated build output and editor indexes | | `make clean` |
 
@@ -87,6 +91,35 @@ swift format lint --strict --recursive Package.swift App TransormaMailExtension 
 ```
 
 The build and test commands refresh VS Code settings automatically when the adapter is installed. `make index` can also replay compiler logs after a build done outside the Makefile, provided that build used `.build/Xcode` and the Development configuration.
+
+## Diagnosing incoming mail
+
+Use **Settings → Diagnostics** for the extension's last startup/build, callback count, and recent decision events. Activating the companion app is not proof that Mail has called the extension. A header callback can be followed by another callback with the body, so the count is callbacks, not unique messages. Sender domains appear only in this local view. The shared store keeps up to 300 events for seven days and expires them during normal processing.
+
+For developer investigation, use Apple's [unified logging](https://developer.apple.com/documentation/os/logging). There is no cloud logging service or additional logging dependency:
+
+```sh
+make logs       # Live stream; stop with Control-C
+make logs-show  # Last hour
+make diagnose   # Installed app state, without changing it
+```
+
+The subsystem is `me.tylercross.transorma`; categories are `Lifecycle`, `MailPipeline`, `Unsubscribe`, and `Storage`. In **Console.app**, select this Mac, start streaming, and filter by that subsystem. Save the search for subsequent sessions. Terminal `log show` reads retained history; macOS controls system-log retention. Stage and decision events use notice-level logging so they are eligible for persistence. Debugger output alone is insufficient because Mail owns the extension process and the app may be running without Xcode attached.
+
+Each callback has a random trace ID. Follow it from `received` through signature verification and classification to a preservation reason or `trashRequested`, then through worker HTTP status and outcome. System logs deliberately exclude subjects, sender/recipient addresses, message bodies, URLs, tokens, and arbitrary error descriptions. The trace ID is stored with the job to correlate events across the app and extension. `trashRequested` means the callback returned that action; Mail provides no move-completion notification. A successful unsubscribe HTTP response does not prove future delivery has stopped.
+
+If no callback appears, inspect **Console → Crash Reports**, or `~/Library/Logs/DiagnosticReports/TransormaMailExtension-*.ips`. Check Mail → Settings → Extensions and its message-content permission, the installed build, and whether Mail is downloading new messages. `pluginkit -m -v -i me.tylercross.transorma.mailextension` shows which copy is selected, but selection and a valid signature do not prove successful initialization. Do not repeatedly loosen classification rules to compensate for a missing or crashing callback.
+
+For a crash, open the `.ips` in Xcode and inspect the triggered thread. For breakpoints, build Debug with symbols and use **Debug → Attach to Process by PID or Name → TransormaMailExtension**, waiting for its next launch if necessary. Never block Mail's callback while testing a production mailbox; delayed decisions preserve messages. The MailKit principal's initializer and message-handler factory are explicitly `nonisolated`: despite the imported protocol's UI-actor annotation, Mail calls these non-UI methods from its XPC queue. The native tests compile the actual adapter sources and exercise this entry point in a detached task.
+
+To reproduce classification from an exported email:
+
+```sh
+make build-diagnostics
+.build/debug/transorma-diagnostics --assess '/absolute/path/to/message.eml'
+```
+
+This uses an isolated temporary store with protection/intelligence enabled, the real DNS signature verifier, and on-device classification when available. It prints stage timings and a decision, sends no unsubscribe, never writes the installed app's state, and cannot replay a Mail callback. It labels its system logs `source=replay`; actual callbacks use `source=mail`. `.eml` files are ignored by Git. A replay passing while Mail has no successful callbacks indicates an integration problem, not a completed mailbox action.
 
 ## Xcode and development isolation
 

@@ -7,7 +7,24 @@ public struct StoreSnapshot: Codable, Sendable {
     public var jobs: [UnsubscribeJob] = []
     public var recentRequests: [String: Date] = [:]
     public var lastMailActivity: Date?
+    public var diagnostics: DiagnosticState?
     public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case version, settings, jobs, recentRequests, lastMailActivity, diagnostics
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version)
+        settings = try values.decode(ProtectionSettings.self, forKey: .settings)
+        jobs = try values.decode([UnsubscribeJob].self, forKey: .jobs)
+        recentRequests = try values.decode([String: Date].self, forKey: .recentRequests)
+        lastMailActivity = try values.decodeIfPresent(Date.self, forKey: .lastMailActivity)
+        // Optional diagnostic data must not make consent or the durable queue unreadable,
+        // including after a newer build introduces an event an older build cannot decode.
+        diagnostics = try? values.decodeIfPresent(DiagnosticState.self, forKey: .diagnostics)
+    }
 }
 
 /// Small, bounded state file shared by the app and extension. flock + atomic replacement
@@ -36,7 +53,13 @@ public final class SharedStore: @unchecked Sendable {
             at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     }
 
-    public func snapshot() throws -> StoreSnapshot { try transaction(write: false) { $0 } }
+    public func snapshot() throws -> StoreSnapshot {
+        try transaction(write: false) { state in
+            var snapshot = state
+            snapshot.diagnostics?.entries.removeAll { Date.now.timeIntervalSince($0.date) > Self.retentionInterval }
+            return snapshot
+        }
+    }
 
     public func setSettings(_ settings: ProtectionSettings) throws {
         try transaction { state in
@@ -55,6 +78,29 @@ public final class SharedStore: @unchecked Sendable {
 
     public func heartbeat(now: Date = .now) throws {
         try transaction { state in state.lastMailActivity = now }
+    }
+
+    public func recordExtensionStart(now: Date = .now) throws {
+        try transaction { state in
+            var diagnostics = state.diagnostics ?? DiagnosticState()
+            diagnostics.extensionStartedAt = now
+            diagnostics.extensionBuild = TransormaLog.build
+            state.diagnostics = diagnostics
+        }
+    }
+
+    public func recordDiagnostic(_ entry: DiagnosticEntry) throws {
+        try transaction { state in
+            var diagnostics = state.diagnostics ?? DiagnosticState()
+            if entry.event == .received {
+                state.lastMailActivity = entry.date
+                diagnostics.callbackCount += 1
+            }
+            diagnostics.entries.removeAll { entry.date.timeIntervalSince($0.date) > Self.retentionInterval }
+            diagnostics.entries.append(entry)
+            diagnostics.entries = Array(diagnostics.entries.suffix(300))
+            state.diagnostics = diagnostics
+        }
     }
 
     /// Persist before returning a Trash action. A full or inaccessible store keeps the message.
@@ -149,6 +195,7 @@ public final class SharedStore: @unchecked Sendable {
     }
 
     private func prune(_ state: inout StoreSnapshot, now: Date) {
+        state.diagnostics?.entries.removeAll { now.timeIntervalSince($0.date) > Self.retentionInterval }
         state.jobs.removeAll {
             now.timeIntervalSince($0.createdAt) > Self.retentionInterval && $0.status != .processing
         }

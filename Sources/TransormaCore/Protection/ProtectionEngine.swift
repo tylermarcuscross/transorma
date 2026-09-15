@@ -30,19 +30,28 @@ public actor ProtectionEngine {
     /// Verifies and prepares an unsubscribe request without writing state or touching the sender's server.
     /// The MailKit adapter commits it only while its message decision is still open.
     public func prepare(
-        raw: Data, deadline: ContinuousClock.Instant = .now.advanced(by: .seconds(20))
+        raw: Data, deadline: ContinuousClock.Instant = .now.advanced(by: .seconds(20)),
+        trace: MessageTrace = MessageTrace()
     ) async -> UnsubscribeJob? {
-        guard raw.count <= 2_000_000, await acquireSlot(byteCount: raw.count, deadline: deadline) else { return nil }
+        func preserve(_ event: ProcessingEvent) -> UnsubscribeJob? {
+            trace.record(event)
+            return nil
+        }
+        trace.record(.assessing)
+        guard raw.count <= 2_000_000 else { return preserve(.oversizedMessage) }
+        guard await acquireSlot(byteCount: raw.count, deadline: deadline) else { return preserve(.expiredOrBusy) }
         defer { releaseSlot() }
+        var stage = ProcessingEvent.assessing
         do {
             try Task.checkCancellation()
-            guard ContinuousClock.now < deadline else { return nil }
+            guard ContinuousClock.now < deadline else { return preserve(.deadlineExpired) }
             let settings = try store.snapshot().settings
-            guard settings.enabled else { return nil }
+            guard settings.enabled else { return preserve(.paused) }
             let message = try MailDocument(raw: raw)
-            guard let sender = message.sender, !settings.allows(sender),
-                message.single("auto-submitted") == nil || message.single("auto-submitted")?.lowercased() == "no"
-            else { return nil }
+            guard let sender = message.sender else { return preserve(.malformedMessage) }
+            guard !settings.allows(sender) else { return preserve(.senderExcluded) }
+            guard message.single("auto-submitted") == nil || message.single("auto-submitted")?.lowercased() == "no"
+            else { return preserve(.automatedMessage) }
             let content = message.content
             let text = content.text + " " + UnsubscribePage.visibleText(in: content.html)
             let subject = HeaderText.decode(message.single("subject") ?? "")
@@ -50,36 +59,58 @@ public actor ProtectionEngine {
             let bodyLinks = UnsubscribePage.emailLinks(in: content.html)
             let candidates = Array(Set((headerLinks + bodyLinks).filter { (try? URLPolicy.validate($0)) != nil }))
             let usingIntelligence = settings.useIntelligence && intelligence.available
-            guard
-                MarketingPolicy.isCandidate(
-                    subject: subject, text: text, hasUnsubscribe: !candidates.isEmpty,
-                    usingIntelligence: usingIntelligence)
-            else {
-                return nil
+            if let reason = MarketingPolicy.rejectionReason(
+                subject: subject, text: text, hasUnsubscribe: !candidates.isEmpty,
+                usingIntelligence: usingIntelligence)
+            {
+                return preserve(reason)
             }
+            stage = .verifyingSignature
+            trace.record(stage)
             let verified = try await verifier.verify(message)
             try Task.checkCancellation()
-            guard ContinuousClock.now < deadline else { return nil }
+            guard ContinuousClock.now < deadline else { return preserve(.deadlineExpired) }
             if usingIntelligence {
-                guard try await intelligence.isMarketing(subject: subject, text: text) else { return nil }
+                stage = .classifying
+                trace.record(stage)
+                guard try await intelligence.isMarketing(subject: subject, text: text) else {
+                    return preserve(.modelRejected)
+                }
             }
             try Task.checkCancellation()
-            guard ContinuousClock.now < deadline else { return nil }
-            let job: UnsubscribeJob
+            guard ContinuousClock.now < deadline else { return preserve(.deadlineExpired) }
+            var job: UnsubscribeJob
             if let url = message.oneClickURL, verified.covers("list-unsubscribe"),
                 verified.covers("list-unsubscribe-post")
             {
                 try URLPolicy.validate(url)
                 job = UnsubscribeJob(sender: sender, kind: .oneClick, url: url)
+                trace.record(.preparingOneClick)
             } else {
                 // One unambiguous signed URL, or one explicit link in the fully signed body.
                 guard settings.useIntelligence, intelligence.available, candidates.count == 1,
                     let url = candidates.first
-                else { return nil }
+                else { return preserve(.ambiguousUnsubscribe) }
                 job = UnsubscribeJob(sender: sender, kind: .web, url: url)
+                trace.record(.preparingWeb)
             }
+            job.traceID = trace.id
             return job
-        } catch { return nil }
+        } catch is CancellationError {
+            return preserve(.cancelled)
+        } catch let error as MailError {
+            switch error {
+            case .malformedMessage: return preserve(.malformedMessage)
+            case .unsupportedSignature: return preserve(.unsupportedSignature)
+            case .invalidSignature: return preserve(.invalidSignature)
+            case .dnsFailure: return preserve(.dnsFailure)
+            case .unavailable: return preserve(.modelUnavailable)
+            case .storageUnavailable, .corruptStore: return preserve(.storageUnavailable)
+            default: return preserve(stage == .classifying ? .modelFailed : .assessmentFailed)
+            }
+        } catch {
+            return preserve(stage == .classifying ? .modelFailed : .assessmentFailed)
+        }
     }
 
     /// Mail may deliver a burst after reopening. Wait fairly within each callback's

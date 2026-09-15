@@ -3,6 +3,7 @@ import TransormaCore
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @State private var showsDiagnostics = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -42,11 +43,14 @@ struct SettingsView: View {
             }
             .disabled(!model.storageReady)
             loginSettings
+            Button("Diagnostics…") { showsDiagnostics = true }
+                .accessibilityIdentifier("open-diagnostics")
             Text(
                 "You can recover messages from Mail’s Trash until Mail deletes them. Unsubscribing cannot be undone here; to receive a list again, subscribe on its website."
             )
             .font(.caption).foregroundStyle(.secondary)
         }
+        .sheet(isPresented: $showsDiagnostics) { DiagnosticsView().environment(model) }
     }
 
     private var loginSettings: some View {

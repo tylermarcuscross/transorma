@@ -10,7 +10,7 @@ XCODEBUILD := $(TOOLCHAIN) xcodebuild -project $(PROJECT) -scheme $(SCHEME) \
 DEVELOPMENT_BUILD := $(XCODEBUILD) -configuration Development
 SWIFT_FILES := Package.swift App TransormaMailExtension Sources Tests
 
-.PHONY: help build build-signed run xcode clean test test-core test-unit test-ui build-diagnostics lint format verify index reindex archive-unsigned doctor
+.PHONY: help build build-signed run xcode clean test test-core test-unit test-ui build-diagnostics lint format verify index reindex archive-unsigned doctor logs logs-show diagnose
 
 help:
 	@printf '%s\n' \
@@ -28,6 +28,9 @@ help:
 		'make index / reindex   Refresh editor settings / clean build and refresh' \
 		'make archive-unsigned  Validate a Release archive without signing' \
 		'make doctor            Show the selected toolchain and editor adapter'
+	@printf '%s\n' \
+		'make logs / logs-show  Stream app and extension logs / show the last hour' \
+		'make diagnose          Read installed app state and recent processing events'
 
 build:
 	$(DEVELOPMENT_BUILD) build-for-testing
@@ -64,6 +67,15 @@ test-ui:
 build-diagnostics:
 	$(TOOLCHAIN) xcrun swift build --product transorma-diagnostics
 
+logs:
+	/usr/bin/log stream --level info --style compact --predicate 'subsystem == "me.tylercross.transorma"'
+
+logs-show:
+	/usr/bin/log show --last 1h --info --style compact --predicate 'subsystem == "me.tylercross.transorma"'
+
+diagnose: build-diagnostics
+	.build/debug/transorma-diagnostics --status
+
 lint:
 	$(TOOLCHAIN) xcrun swift-format lint --strict --configuration .swift-format --recursive $(SWIFT_FILES)
 
@@ -88,7 +100,5 @@ archive-unsigned:
 		archive CODE_SIGNING_ALLOWED=NO
 
 doctor:
-	$(TOOLCHAIN) xcodebuild -version
-	$(TOOLCHAIN) xcrun swift --version
-	$(TOOLCHAIN) xcrun --sdk macosx --show-sdk-version
+	$(TOOLCHAIN) --doctor
 	/bin/zsh Scripts/editor.sh doctor

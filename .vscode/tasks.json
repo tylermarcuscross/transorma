@@ -179,6 +179,51 @@
                 "cwd": "${workspaceFolder}"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Transorma: stream logs",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "logs"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Transorma: recent logs",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "logs-show"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Transorma: diagnose installed app",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "diagnose"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Transorma: assess saved email (read-only)",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/debug/transorma-diagnostics",
+            "args": [
+                "--assess",
+                "${input:emailPath}"
+            ],
+            "dependsOn": "Transorma: build diagnostics",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "emailPath",
+            "type": "promptString",
+            "description": "Absolute path to the saved .eml (no unsubscribe will be sent)"
         }
     ]
 }

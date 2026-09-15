@@ -1,4 +1,5 @@
 import SwiftUI
+import TransormaCore
 
 @main
 struct TransormaApp: App {
@@ -50,6 +51,9 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        TransormaLog.lifecycle.notice(
+            "App launched build=\(TransormaLog.build, privacy: .public) preview=\(self.model.isPreview) storage_ready=\(self.model.storageReady)"
+        )
         model.configureLoginAtFirstLaunch()
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(
@@ -72,6 +76,7 @@ final class ApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        TransormaLog.lifecycle.notice("App is terminating; companion processing stops.")
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         processingTask?.cancel()
         processingTask = nil

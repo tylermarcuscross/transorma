@@ -51,6 +51,26 @@ final class TransormaUITests: XCTestCase {
     }
 
     @MainActor
+    func testDiagnosticsShowsWhenMailHasNotCalledTheExtension() throws {
+        let app = launchApp()
+        let button = app.buttons["open-diagnostics"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !button.isHittable {
+            app.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -400)
+        }
+        button.click()
+        XCTAssertTrue(app.staticTexts["No processing events yet"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Last Mail callback"].exists)
+        XCTAssertTrue(app.buttons["Open Console"].exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Diagnostics"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.buttons["Done"].click()
+        XCTAssertFalse(app.staticTexts["No processing events yet"].exists)
+    }
+
+    @MainActor
     func testMenuBarNavigationShortcutsAndQuit() throws {
         let app = launchApp()
         XCTAssertTrue(app.staticTexts["Preview activation is off"].waitForExistence(timeout: 10))

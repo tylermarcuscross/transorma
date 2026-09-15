@@ -6,7 +6,7 @@ This file distinguishes implemented behavior from checks that require an actual 
 
 Xcode account sign-in and development provisioning now work for the configured team: the signed Debug app and extension build with their shared App Group. Distribution and PCC access remain separate setup. For PCC, enroll in Small Business and [request Apple's managed entitlement](https://developer.apple.com/private-cloud-compute). Apple currently limits eligibility to developers with fewer than two million first-time downloads.
 
-Xcode 27 RC (`27A266a`) is installed at `/Applications/Xcode-27.app`. Use the final release toolchain for App Store submission. The shared scheme's Development configuration uses ad hoc signing and disposable settings without App Group entitlements. Debug and Release use the signing policy in `Config/Shared.xcconfig` and the target entitlements under `App/Resources` and `TransormaMailExtension/Resources`.
+Use the maintained Xcode installation at `/Applications/Xcode.app` and select it with `xcode-select`; `make doctor` reports its version and SDK. The separate RC installation has been removed. Use an App Store-supported release toolchain for submission. The shared scheme's Development configuration uses ad hoc signing and disposable settings without App Group entitlements. Debug and Release use the signing policy in `Config/Shared.xcconfig` and the target entitlements under `App/Resources` and `TransormaMailExtension/Resources`.
 
 `fm` is optional developer tooling. Apple requires a privileged user to read and accept its machine-wide terms (`sudo fm license`). That acceptance was not performed. Native Foundation Models inference is independent of this CLI setup.
 

@@ -38,13 +38,32 @@ public actor UnsubscribeWorker {
 
     private func send(_ request: HTTPRequest, for job: UnsubscribeJob) async throws -> HTTPResponse {
         let store = store
-        return try await transport.send(request) {
+        let traceID = job.traceID?.uuidString ?? "legacy"
+        TransormaLog.worker.notice(
+            "trace=\(traceID, privacy: .public) sending method=\(request.method.rawValue, privacy: .public) attempt=\(job.attempts)"
+        )
+        let response = try await transport.send(request) {
             try Task.checkCancellation()
             _ = try store.authorize(job)
         }
+        TransormaLog.worker.notice("trace=\(traceID, privacy: .public) response status=\(response.status)")
+        return response
     }
 
     private func process(_ job: UnsubscribeJob) async {
+        let traceID = job.traceID?.uuidString ?? "legacy"
+        TransormaLog.worker.notice(
+            "trace=\(traceID, privacy: .public) claimed kind=\(job.kind.rawValue, privacy: .public) attempt=\(job.attempts)"
+        )
+        defer {
+            if let state = try? store.snapshot(), let current = state.jobs.first(where: { $0.id == job.id }) {
+                TransormaLog.worker.notice(
+                    "trace=\(traceID, privacy: .public) finished status=\(current.status.rawValue, privacy: .public) attempt=\(current.attempts)"
+                )
+            } else {
+                TransormaLog.storage.error("Could not read the worker outcome.")
+            }
+        }
         do {
             _ = try authorized(job)
             guard let url = job.url else { throw MailError.unsafeURL }

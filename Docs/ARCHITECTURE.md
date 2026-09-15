@@ -72,6 +72,8 @@ The app and extension can both drain the queue. A worker drains ready jobs until
 
 ## State and concurrency
 
+Apple unified logging provides process lifecycle, per-callback stages/reasons, worker HTTP status, and storage failures under `me.tylercross.transorma`. `MessageTrace` uses a random ID that follows a prepared job across processes. It records only closed event codes and timings in system logs. Optional diagnostic state in the existing shared store powers Settings → Diagnostics, retaining at most 300 events for seven days with sender domains but no subjects, bodies, or URLs. Missing diagnostic fields decode from older state without changing settings or queued jobs; diagnostic persistence failures do not change message decisions. Replays use temporary stores and are labeled separately from Mail callbacks.
+
 `SharedStore` is the persisted source of truth. It uses a bounded versioned JSON document, an interprocess file lock, and atomic replacement. The app and Mail extension are separate processes: a Swift actor alone cannot coordinate their writes. Settings mutations, cancellation of pending jobs, queue insertion, and claims happen inside store transactions. UI changes mutate only their intended fields, preventing a stale snapshot from overwriting another process's changes.
 
 The refactor preserves the existing App Group identifier, state version, Codable field names, job kinds/status values, and duplicate fingerprints. Moving files does not reset user settings or pending jobs.

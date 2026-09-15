@@ -17,6 +17,7 @@ public struct UnsubscribeJob: Codable, Sendable, Identifiable {
     public var attempts = 0
     public var nextAttempt: Date
     public var detail = "Marketing message detected; unsubscribe queued."
+    public var traceID: UUID?
 
     public init(sender: String, kind: JobKind, url: URL, now: Date = .now) {
         id = Self.digest(sender.lowercased() + "\n" + url.absoluteString)

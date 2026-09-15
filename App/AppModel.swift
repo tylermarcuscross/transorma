@@ -30,7 +30,9 @@ final class AppModel {
         guard storageReady else { return "Protection is unavailable" }
         guard snapshot.settings.enabled else { return "Protection is paused" }
         switch pendingUnsubscribeCount {
-        case 0: return "Protection enabled · waiting for Mail"
+        case 0:
+            return snapshot.lastMailActivity == nil
+                ? "Activated · no Mail callbacks recorded" : "Protection enabled · waiting for Mail"
         case 1: return "1 unsubscribe request remaining"
         case let count: return "\(count) unsubscribe requests remaining"
         }
@@ -57,6 +59,7 @@ final class AppModel {
             let store = try SharedStore.appGroup()
             return AppModel(store: store, worker: UnsubscribeWorker(store: store), loginItem: LoginItem())
         } catch {
+            TransormaLog.storage.error("App cannot open its App Group; processing is unavailable.")
             return AppModel(store: nil, loginItem: LoginItem())
         }
     }
@@ -120,6 +123,7 @@ final class AppModel {
             storageReady = true
             error = nil
         } catch {
+            TransormaLog.storage.error("App could not refresh shared protection state.")
             self.error =
                 "Protection state could not be read. Automatic processing is paused until storage is available."
             storageReady = false
@@ -140,6 +144,7 @@ final class AppModel {
             requestCatchUp()
             return true
         } catch {
+            TransormaLog.storage.error("App could not save protection settings.")
             self.error = "Your change could not be saved. Please try again."
             storageReady = false
             return false

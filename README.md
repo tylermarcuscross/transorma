@@ -9,6 +9,7 @@ The app is under development. Local builds and automated tests work without paid
 Install Xcode 27 or newer and open this folder in VS Code, or open `Transorma.xcodeproj` in Xcode and select the **Transorma** scheme. For VS Code, install the recommended official Swift extension and the development-only Xcode adapter:
 
 ```sh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 brew install xcode-build-server
 make doctor
 make build
@@ -33,6 +34,8 @@ After developer enrollment, configure the app and extension for the same provisi
 Add your approved developer account in Xcode → Settings → Accounts and confirm the team in `Config/Shared.xcconfig`. Run `make build-signed` (or VS Code's **Transorma: build signed app** task) to build the Mail-enabled app with automatic provisioning. The output is `.build/Xcode/Build/Products/Debug/Transorma.app`; install that copy in Applications. `make run` continues to open a clearly labeled preview with disposable settings, even if its activation switch is on.
 
 Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. The regular app defaults to opening at login to finish queued unsubscribes after the extension exits; its window can stay closed. You can turn login launch off in Settings, and later launches respect that choice. Development builds leave login registration disabled. One-time protection setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
+
+For troubleshooting, **Settings → Diagnostics** shows extension startup, callbacks, and recent decisions. Use `make logs` for live system logs, `make logs-show` for retained logs, and `make diagnose` for installed state. The [development guide](Docs/DEVELOPMENT.md#diagnosing-incoming-mail) covers Console, crash reports, and read-only `.eml` assessment.
 
 ## Code layout
 
