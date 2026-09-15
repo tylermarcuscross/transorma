@@ -2,8 +2,6 @@
 
 Automatic unsubscribe and marketing cleanup for Apple Mail on macOS 27.
 
-Enable protection once. When Mail receives a supported marketing message, Transorma queues an unsubscribe and asks Mail to move the message to Trash. The companion app shows activity and resumes queued work. There are no per-message approval dialogs.
-
 The app is under development. Local builds and automated tests work without paid developer enrollment; signed Mail integration and App Store validation remain release work. See the [validation record](Docs/VALIDATION.md) and [release preparation](Docs/RELEASE.md).
 
 ## Start developing
