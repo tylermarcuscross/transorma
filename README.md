@@ -26,6 +26,14 @@ make format       # Format all Swift sources with the bundled swift-format
 
 Run `make` for all commands. The [development guide](Docs/DEVELOPMENT.md) covers toolchain selection, VS Code indexing, debugging, and signed configurations. No remote Swift package dependencies or separate Swift installation are required.
 
+## Running against Mail
+
+After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Activate Transorma** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
+
+Add your approved developer account in Xcode → Settings → Accounts and confirm the team in `Config/Shared.xcconfig`. Run `make build-signed` (or VS Code's **Transorma: build signed app** task) to build the Mail-enabled app with automatic provisioning. The output is `.build/Xcode/Build/Products/Debug/Transorma.app`; install that copy in Applications. `make run` continues to open a clearly labeled preview with disposable settings, even if its activation switch is on.
+
+Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. The regular app defaults to opening at login to finish queued unsubscribes after the extension exits; its window can stay closed. You can turn login launch off in Settings, and later launches respect that choice. Development builds leave login registration disabled. One-time protection setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
+
 ## Code layout
 
 | Location | Responsibility |
@@ -43,23 +51,3 @@ Run `make` for all commands. The [development guide](Docs/DEVELOPMENT.md) covers
 Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processing flow, concurrency rules, and reasons behind this structure.
 
 `Transorma.xcodeproj` defines native targets and packaging. It remains versioned and is hidden from VS Code's Explorer along with generated state; `make xcode` opens it. Build outputs live in ignored `.build/`, and `make clean` removes generated builds and editor indexes. See [workspace conventions](Docs/DEVELOPMENT.md#workspace-and-repository-layout).
-
-## Features
-
-- MailKit message actions, App Sandbox, and a shared App Group using public APIs.
-- Transactional and personal-mail exclusions, on-device marketing classification, and a conservative English keyword fallback when intelligence is off or unavailable.
-- Complete-body DKIM verification, RSA-SHA256 and Ed25519-SHA256, signed decision headers, exact From-domain alignment, and published RFC interoperability tests.
-- RFC 8058 one-click HTTPS POST without cookies, credentials, or redirects.
-- An Apple Intelligence fallback for an explicit unsubscribe link in authenticated mail. It supports bounded same-host navigation and simple HTML forms. The model chooses from validated actions; application code constructs requests.
-- Optional macOS 27 Private Cloud Compute reasoning after local inference, guarded by both user opt-in and the actual signing entitlement. Default entitlements do not enable PCC.
-- A persistent bounded queue with exclusive cross-process claims, consent checks before network writes, explicit temporary-error backoff, seven-day expiry, and token removal after completion.
-- Automatic catch-up as Mail downloads messages that arrived while it was closed, with bounded assessment waiting for download bursts. Queued unsubscribes resume at Transorma launch, on Mac wake, and when Mail opens.
-- Two sections: Settings for protection, Mail setup, intelligence, and login launch; Activity for unsubscribe history and progress. The menu bar offers Open Transorma (⌘N), Settings… (⌘,), and Quit (⌘Q).
-
-## Running against Mail
-
-After developer enrollment, configure the app and extension for the same provisioned App Group, `group.me.tylercross.transorma`. Use a signed **Debug** build; Development cannot process mail. Enable Transorma in **Mail → Settings → Extensions**, allow message-content access, then enable **Activate Transorma** in the app. See [signed installation](Docs/RELEASE.md#signed-installation).
-
-Add your approved developer account in Xcode → Settings → Accounts and confirm the team in `Config/Shared.xcconfig`. Run `make build-signed` (or VS Code's **Transorma: build signed app** task) to build the Mail-enabled app with automatic provisioning. The output is `.build/Xcode/Build/Products/Debug/Transorma.app`; install that copy in Applications. `make run` continues to open a clearly labeled preview with disposable settings, even if its activation switch is on.
-
-Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. The regular app defaults to opening at login to finish queued unsubscribes after the extension exits; its window can stay closed. You can turn login launch off in Settings, and later launches respect that choice. Development builds leave login registration disabled. One-time protection setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
