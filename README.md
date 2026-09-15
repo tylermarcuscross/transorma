@@ -44,7 +44,7 @@ Read the [architecture guide](Docs/ARCHITECTURE.md) for the boundaries, processi
 
 `Transorma.xcodeproj` defines native targets and packaging. It remains versioned and is hidden from VS Code's Explorer along with generated state; `make xcode` opens it. Build outputs live in ignored `.build/`, and `make clean` removes generated builds and editor indexes. See [workspace conventions](Docs/DEVELOPMENT.md#workspace-and-repository-layout).
 
-## Implemented behavior
+## Features
 
 - MailKit message actions, App Sandbox, and a shared App Group using public APIs.
 - Transactional and personal-mail exclusions, on-device marketing classification, and a conservative English keyword fallback when intelligence is off or unavailable.
@@ -63,15 +63,3 @@ After developer enrollment, configure the app and extension for the same provisi
 Add your approved developer account in Xcode → Settings → Accounts and confirm the team in `Config/Shared.xcconfig`. Run `make build-signed` (or VS Code's **Transorma: build signed app** task) to build the Mail-enabled app with automatic provisioning. The output is `.build/Xcode/Build/Products/Debug/Transorma.app`; install that copy in Applications. `make run` continues to open a clearly labeled preview with disposable settings, even if its activation switch is on.
 
 Mail must be running to supply messages. When you reopen Mail, Transorma checks the messages Mail downloads, including those that arrived while it was closed. The regular app defaults to opening at login to finish queued unsubscribes after the extension exits; its window can stay closed. You can turn login launch off in Settings, and later launches respect that choice. Development builds leave login registration disabled. One-time protection setup authorizes automatic unsubscribe requests and Trash actions. Messages can be recovered from Mail's Trash; resubscription happens on the sender's website.
-
-## Coverage boundaries
-
-The extension processes messages supplied by MailKit; it cannot enumerate an existing inbox or replay previously downloaded messages that were skipped, timed out, or received while protection was paused. Catch-up depends on Mail downloading the messages, not their unread status. It does not run continuously while the Mac sleeps. An unsubscribe may complete after Trash is requested. If the callback deadline wins before queue commitment, assessment cannot later enqueue work. Bursts that exceed the bounded assessment capacity preserve the excess messages.
-
-Ambiguous, encrypted, malformed, oversized, unsigned, or unsupported messages are preserved. A list header alone does not establish marketing. The conservative rules leave many newsletters untouched; synthetic model checks do not establish production classification accuracy.
-
-Web fallback supports UTF-8 HTML, same-host links, and simple POST forms with hidden fields and an explicit unsubscribe button. It does not automate login, CAPTCHA, JavaScript, cookies, arbitrary preferences, cross-host navigation, or `mailto:` requests. Plain-text-only links without a List-Unsubscribe header are not extracted. Transport interruptions with an unknown outcome are not automatically replayed. A successful response does not prove that future mail will stop.
-
-[Private Cloud Compute access](https://developer.apple.com/private-cloud-compute) requires eligible program membership and an approved managed entitlement. An OS or Xcode upgrade does not grant it. The [release guide](Docs/RELEASE.md) tracks signing, inference evaluation, privacy review, and distribution requirements.
-
-Specifications: [MailKit message actions](https://developer.apple.com/documentation/mailkit/memessageactionhandler), [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058), [RFC 6376](https://www.rfc-editor.org/rfc/rfc6376), [RFC 8463](https://www.rfc-editor.org/rfc/rfc8463). Attribution for published test vectors is in [third-party notices](Docs/THIRD_PARTY_NOTICES.md).
