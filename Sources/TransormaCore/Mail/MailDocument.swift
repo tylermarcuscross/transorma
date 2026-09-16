@@ -1,6 +1,7 @@
 import Foundation
 
-/// A byte-preserving RFC 5322 parser. DKIM always sees the original octets.
+/// Parses RFC 5322 messages, restoring uniformly LF-delimited local mail to CRLF for DKIM and MIME.
+/// All other octets are preserved; mixed or broken line endings are rejected.
 public struct MailDocument: Sendable {
     public struct Header: Sendable {
         public let name: String
@@ -19,13 +20,12 @@ public struct MailDocument: Sendable {
     public let body: Data
 
     public init(raw: Data) throws {
-        guard raw.count <= 2_000_000,
-            let boundary = raw.range(of: Data("\r\n\r\n".utf8)), boundary.lowerBound <= 64_000
+        let raw = try Self.networkData(raw)
+        guard let boundary = raw.range(of: Data("\r\n\r\n".utf8)), boundary.lowerBound <= 64_000
         else {
             throw MailError.malformedMessage
         }
         let head = raw[..<boundary.lowerBound]
-        // Never repair malformed line endings before signature verification.
         let lines = Self.splitLines(Data(head))
         var parsed: [Header] = []
         for line in lines {
@@ -46,6 +46,32 @@ public struct MailDocument: Sendable {
         guard parsed.count <= 250 else { throw MailError.malformedMessage }
         headers = parsed
         body = Data(raw[boundary.upperBound...])
+    }
+
+    private static func networkData(_ raw: Data) throws -> Data {
+        guard raw.count <= 2_000_000 else { throw MailError.malformedMessage }
+        if raw.contains(13) {
+            var previous: UInt8?
+            for byte in raw {
+                guard byte != 10 || previous == 13, previous != 13 || byte == 10 else {
+                    throw MailError.malformedMessage
+                }
+                previous = byte
+            }
+            guard previous != 13 else { throw MailError.malformedMessage }
+            return raw
+        }
+
+        // Mail's local source can use LF. RFC 6376 §3.4 assumes network CRLF before canonicalization.
+        // Work on bytes: decoding and re-encoding a String could corrupt signed non-UTF-8 content.
+        let size = raw.count + raw.count { $0 == 10 }
+        guard size <= 2_000_000 else { throw MailError.malformedMessage }
+        var result = Data(capacity: size)
+        for byte in raw {
+            if byte == 10 { result.append(13) }
+            result.append(byte)
+        }
+        return result
     }
 
     public func values(_ name: String) -> [String] { headers.filter { $0.name == name.lowercased() }.map(\.value) }

@@ -48,7 +48,7 @@ public actor ProtectionEngine {
             let settings = try store.snapshot().settings
             guard settings.enabled else { return preserve(.paused) }
             let message = try MailDocument(raw: raw)
-            guard let sender = message.sender else { return preserve(.malformedMessage) }
+            guard let sender = message.sender else { return preserve(.invalidSender) }
             guard !settings.allows(sender) else { return preserve(.senderExcluded) }
             guard message.single("auto-submitted") == nil || message.single("auto-submitted")?.lowercased() == "no"
             else { return preserve(.automatedMessage) }

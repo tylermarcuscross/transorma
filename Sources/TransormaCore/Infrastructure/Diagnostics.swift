@@ -5,7 +5,7 @@ import OSLog
 public enum ProcessingEvent: String, Codable, Sendable {
     case received, awaitingBody, assessing, verifyingSignature, classifying, preparingOneClick, preparingWeb
     case notReceived, encrypted, preview, paused, senderExcluded, automatedMessage, noUnsubscribe
-    case protectedContent, insufficientPromotionSignals, malformedMessage, oversizedMessage
+    case protectedContent, insufficientPromotionSignals, malformedMessage, invalidSender, oversizedMessage
     case invalidSignature, unsupportedSignature, dnsFailure, modelRejected, modelUnavailable, modelFailed
     case ambiguousUnsubscribe, expiredOrBusy, cancelled, queueFull, storageUnavailable, assessmentFailed
     case queued, duplicate, trashRequested, deadlineExpired
@@ -29,7 +29,8 @@ public enum ProcessingEvent: String, Codable, Sendable {
         case .protectedContent: "Preserved: reply, policy notice, or protected transactional wording."
         case .insufficientPromotionSignals:
             "Preserved: intelligence is off or unavailable and promotion keywords are insufficient."
-        case .malformedMessage: "Preserved: the message or sender could not be parsed."
+        case .malformedMessage: "Preserved: the message structure could not be parsed."
+        case .invalidSender: "Preserved: the From header did not identify one supported sender address."
         case .oversizedMessage: "Preserved: the message exceeds the 2 MB assessment limit."
         case .invalidSignature: "Preserved: DKIM verification or required signed-header coverage failed."
         case .unsupportedSignature: "Preserved: no supported DKIM signature."

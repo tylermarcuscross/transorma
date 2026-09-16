@@ -186,7 +186,7 @@ The [adapter documentation](https://github.com/SolaWing/xcode-build-server) expl
 | `App/AppModel.swift` | Observable UI state and actions backed by shared storage. |
 | `App/Views` | Settings and Activity navigation, menu bar, and window commands. |
 | `TransormaMailExtension` | MailKit callbacks and extension packaging. |
-| `Sources/TransormaCore/Mail` | Byte-preserving message parsing and signature verification. |
+| `Sources/TransormaCore/Mail` | Message parsing, local line-ending normalization, and signature verification. |
 | `Sources/TransormaCore/Protection` | Settings, classification policy, and message assessment. |
 | `Sources/TransormaCore/Unsubscribe` | Queue jobs, page interpretation, and unsubscribe workflows. |
 | `Sources/TransormaCore/Infrastructure` | Persistence, HTTPS, and Apple Intelligence integration. |

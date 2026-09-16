@@ -2,6 +2,15 @@
 
 Environment: Apple silicon, macOS 27, Swift 6.4 (swiftlang-6.4.0.34.1), Xcode 27 (27A266a) at `/Applications/Xcode.app`, macOS 27 SDK. September 14 checks used the earlier `/Applications/Xcode-27.app` location. System-wide `xcode-select` now selects `/Applications/Xcode.app/Contents/Developer`.
 
+## Local message line endings
+
+- The user's personal `TEST` message triggered real Mail callbacks at 19:36:47 EDT: headers, an `awaitingBody` result, then the body callback ending in `malformedMessage`. This confirms that the installed build 2 extension starts and receives Mail callbacks; the earlier startup crash is no longer blocking this delivery.
+- Read only today's matching `TEST` message through Mail's source property. The local source contains 55 LF line endings and no CRLF or bare CR. It reproduces `malformedMessage` in the original parser, which required a CRLF header/body separator. The updated parser restores uniformly LF-delimited data to network CRLF without changing other octets, rejects mixed/broken endings, and enforces size limits after expansion. Sender extraction now has its own `invalidSender` diagnostic.
+- Regression tests failed before the parser change and pass afterward. `make test-core` passes **73 tests**, including both signature algorithms and all four DKIM canonicalization combinations with CRLF and LF inputs, folded headers, multiline bodies, tampering rejection, non-UTF-8 octets, multipart/quoted-printable decoding, and preservation reasons. Strict formatting and whitespace checks pass.
+- Replaying the same untouched local source now yields `noUnsubscribe` in **4 ms**, correctly preserving the personal message. This replay sent no unsubscribe, changed no live state, and moved no Mail message. A new real Mail delivery is still required to confirm the corrected parser inside the host; the replay does not simulate that callback.
+- `make build-signed` and `make build` succeed. Installed **build 3** of the app and extension; strict signature verification passes. Normally restarted Transorma and Mail and registered the installed extension. Removed the generated Debug/Development extension registrations so PlugInKit reports only `/Applications/Transorma.app` for this identifier. Refreshed VS Code settings for seven modules and the manifest. Existing diagnostic history is retained.
+- The original test source, logs, and a backup archive of installed build 2 are ignored under `.build/ParsingReview/`; synthetic regression fixtures contain no real message contents.
+
 ## Consistent editor toolchain
 
 - VS Code's Swift startup log showed the current compiler paired with cached SDK and XCTest paths under the removed `Xcode-27.app`. The system selection also still pointed to standalone Command Line Tools.

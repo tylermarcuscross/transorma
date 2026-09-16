@@ -121,6 +121,25 @@ func tracesExplainPreservationWithoutSavingMessageContents(marketing: Bool) asyn
     #expect(await engine.prepare(raw: fixture.raw, trace: MessageTrace(store: broken.store)) != nil)
 }
 
+@Test(arguments: [
+    ("From: sender@example.com\nSubject: TEST\n\nHello.\n", ProcessingEvent.noUnsubscribe),
+    ("From: sender@example.com\r\n\nHello.", .malformedMessage),
+    ("From: first@example.com, second@example.com\n\nHello.", .invalidSender),
+    ("Subject: TEST\n\nHello.", .invalidSender),
+])
+func parsingDiagnosticsDistinguishPreservationReasons(raw: String, expected: ProcessingEvent) async throws {
+    let storage = try TestStore()
+    defer { storage.remove() }
+    try storage.store.updateSettings { $0.enabled = true }
+    let trace = MessageTrace(store: storage.store)
+    let job = await ProtectionEngine(store: storage.store, intelligence: FakeIntelligence())
+        .prepare(raw: Data(raw.utf8), trace: trace)
+    #expect(job == nil)
+    let state = try storage.store.snapshot()
+    #expect(state.diagnostics?.entries.map(\.event) == [.assessing, expected])
+    #expect(state.jobs.isEmpty)
+}
+
 @Test func deadlineIsRecordedOnceAndCannotClaimTrash() throws {
     let storage = try TestStore()
     defer { storage.remove() }

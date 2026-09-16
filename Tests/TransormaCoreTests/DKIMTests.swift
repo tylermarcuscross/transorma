@@ -70,14 +70,20 @@ private struct SuspendedDNS: TXTResolving {
     arguments: ["rsa-sha256", "ed25519-sha256"],
     ["simple/simple", "relaxed/relaxed", "relaxed/simple", "simple/relaxed"])
 func validatesRealSignatures(algorithm: String, canonicalization: String) async throws {
-    let fixture = try SignedFixture(algorithm: algorithm, canonicalization: canonicalization)
-    let verified = try await DKIMVerifier(resolver: fixture.dns).verify(MailDocument(raw: fixture.raw))
-    #expect(verified.signingDomain == "store.example.com")
-    #expect(verified.covers("list-unsubscribe-post"))
+    let fixture = try SignedFixture(
+        subject: "Summer sale:\r\n\t40% off", body: "Save today.\r\nCafé sale.\r\nShop now.",
+        algorithm: algorithm, canonicalization: canonicalization)
+    for newline in ["\r\n", "\n"] {
+        let raw = Data(
+            String(decoding: fixture.raw, as: UTF8.self).replacingOccurrences(of: "\r\n", with: newline).utf8)
+        let verified = try await DKIMVerifier(resolver: fixture.dns).verify(MailDocument(raw: raw))
+        #expect(verified.signingDomain == "store.example.com")
+        #expect(verified.covers("list-unsubscribe-post"))
+    }
 }
 
-@Test(arguments: ["body", "link", "from", "duplicate", "length"])
-func rejectsTampering(change: String) async throws {
+@Test(arguments: ["body", "link", "from", "duplicate", "length"], ["\r\n", "\n"])
+func rejectsTampering(change: String, newline: String) async throws {
     let fixture = try SignedFixture()
     let original = String(decoding: fixture.raw, as: UTF8.self)
     let modified: String =
@@ -89,7 +95,8 @@ func rejectsTampering(change: String) async throws {
         default: original.replacingOccurrences(of: "v=1;", with: "v=1; l=0;")
         }
     await #expect(throws: (any Error).self) {
-        try await DKIMVerifier(resolver: fixture.dns).verify(MailDocument(raw: Data(modified.utf8)))
+        try await DKIMVerifier(resolver: fixture.dns).verify(
+            MailDocument(raw: Data(modified.replacingOccurrences(of: "\r\n", with: newline).utf8)))
     }
 }
 
